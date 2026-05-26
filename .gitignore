@@ -17,3 +17,10 @@ output_files/
 *.vcd
 *.bak
 __pycache__/
+
+# 빠진 항목들 - 추가 추천
+*.log
+*.pyc
+*.qdb
+*.hw/
+*.ip_user_files/
