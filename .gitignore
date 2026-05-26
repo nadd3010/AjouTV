@@ -1,0 +1,19 @@
+# ModelSim
+work/
+*.wlf
+*.vstf
+transcript
+*.mpf
+
+# Vivado (또는 Quartus)
+vivado_proj/
+*.runs/
+*.cache/
+db/
+incremental_db/
+output_files/
+
+# 기타
+*.vcd
+*.bak
+__pycache__/
