@@ -7,6 +7,6 @@ module input_scaler (
     output reg         scaled_valid
 );
 
-// TODO: 8비트  Q8.8 고정소수점 변환
+// TODO: 8비트  Q8.8 고정소수점 변환하기
 
 endmodule
