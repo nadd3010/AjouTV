@@ -2,7 +2,7 @@
 # 테스트 하고 싶은 파일을 주석 해제
 
 # --- sensor_interface ---
-# vlog ../rtl/sensor_interface/uart_rx.v
+vlog ../rtl/sensor_interface/uart_rx.v
 # vlog ../rtl/sensor_interface/input_scaler.v
 
 # --- sliding_window ---
@@ -31,7 +31,7 @@
 # vlog ../rtl/top.v
 
 # ===== 테스트벤치 컴파일 =====
-# vlog ../tb/tb_uart_rx.v
+vlog ../tb/tb_uart_rx.v
 # vlog ../tb/tb_input_scaler.v
 # vlog ../tb/tb_sliding_window.v
 # vlog ../tb/tb_qkv_transform.v
@@ -48,7 +48,7 @@
 # vlog ../tb/tb_top.v
 
 # ===== 시뮬레이션 실행 =====
-# vsim work.tb_uart_rx
+vsim work.tb_uart_rx
 # vsim work.tb_input_scaler
 # vsim work.tb_sliding_window
 # vsim work.tb_qkv_transform
@@ -65,8 +65,8 @@
 # vsim work.tb_top
 
 # ===== 파형 추가 =====
-# add wave -radix hex sim:/*
+add wave -radix hex sim:/*
 
 # ===== 실행 시간 =====
-# run 1ms
+run 1ms
 # run -all
