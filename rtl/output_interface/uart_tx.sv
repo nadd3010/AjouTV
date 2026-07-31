@@ -3,6 +3,7 @@ module uart_tx (
     input  wire        rst_n,
     input  wire        start,
     input  wire        label,
+    input  wire [1:0]  cause_index,
     input  wire [17:0] col_sum [0:3],
     output reg         tx,
     output reg         done
@@ -105,7 +106,7 @@ module uart_tx (
                 PKT_IDLE: begin
                     if (start) begin
                         // 9바이트 버퍼 구성
-                        tx_buf[0] <= {7'd0, label};                    // label
+                        tx_buf[0] <= {5'd0, cause_index, label};                   // label
                         tx_buf[1] <= col_sum[0][15:8];                 // col_sum[0] 상위
                         tx_buf[2] <= col_sum[0][7:0];                  // col_sum[0] 하위
                         tx_buf[3] <= col_sum[1][15:8];                 // col_sum[1] 상위

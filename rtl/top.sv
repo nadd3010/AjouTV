@@ -177,6 +177,7 @@ module top (
     );
 
     uart_tx u_uart_tx (
+        .cause_index(cause_index),
         .clk(clk),
         .rst_n(rst_n),
         .start(tx_start),

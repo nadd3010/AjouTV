@@ -72,27 +72,36 @@ module tb_top;
         for (i = 0; i < 16; i = i + 1)
             sensor_data[i] = 8'd100;
 
-        // 16바이트 UART 전송
-        $display("[%0t] Sending 16 bytes via UART...", $time);
-        for (i = 0; i < 16; i = i + 1) begin
-            uart_send(sensor_data[i]);
-            $display("[%0t] Sent byte[%0d] = %0d", $time, i, sensor_data[i]);
-        end
-        $display("[%0t] All 16 bytes sent", $time);
+        $display("[%0t] Starting UART TX and RX concurrently...", $time);
+        
+        // fork ~ join을 사용하여 송신과 수신을 동시에(병렬로) 실행합니다.
+        fork
+            // Thread 1: PC -> FPGA 16바이트 송신
+            begin
+                for (i = 0; i < 16; i = i + 1) begin
+                    uart_send(sensor_data[i]);
+                    $display("[%0t] Sent byte[%0d] = %0d", $time, i, sensor_data[i]);
+                end
+                $display("[%0t] All 16 bytes sent", $time);
+            end
 
-        // 처리 완료 대기
-        $display("[%0t] Waiting for processing...", $time);
-
-        // TX 출력 9바이트 수신
-        $display("[%0t] Capturing TX output...", $time);
-        for (i = 0; i < 9; i = i + 1) begin
-            uart_receive(rx_buf[i]);
-            $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, i, rx_buf[i], rx_buf[i]);
-        end
+            // Thread 2: FPGA -> PC 9바이트 수신 (FPGA가 너무 빨라 즉시 응답하므로 미리 대기)
+            begin
+                for (int j = 0; j < 9; j = j + 1) begin
+                    uart_receive(rx_buf[j]);
+                    $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, j, rx_buf[j], rx_buf[j]);
+                end
+            end
+        join
+        
+        $display("[%0t] All UART communication finished.", $time);
 
         // 결과 출력
         $display("===== Results =====");
-        $display("Label     : %0d (%s)", rx_buf[0], rx_buf[0] ? "ABNORMAL" : "NORMAL");
+        // rx_buf[0]의 0번 비트는 Label, 1~2번 비트는 cause_index로 해석
+        $display("Label       : %0d (%s)", rx_buf[0][0], rx_buf[0][0] ? "ABNORMAL" : "NORMAL");
+        $display("Cause Index : %0d", rx_buf[0][2:1]);
+        // ... (나머지 col_sum 출력은 그대로 유지)
         $display("col_sum[0]: 0x%02X%02X", rx_buf[1], rx_buf[2]);
         $display("col_sum[1]: 0x%02X%02X", rx_buf[3], rx_buf[4]);
         $display("col_sum[2]: 0x%02X%02X", rx_buf[5], rx_buf[6]);
@@ -113,23 +122,36 @@ module tb_top;
                 sensor_data[i] = 8'd100;  // 나머지: 정상
         end
 
-        $display("[%0t] Sending 16 bytes via UART...", $time);
-        for (i = 0; i < 16; i = i + 1) begin
-            uart_send(sensor_data[i]);
-            $display("[%0t] Sent byte[%0d] = %0d", $time, i, sensor_data[i]);
-        end
-        $display("[%0t] All 16 bytes sent", $time);
+        $display("[%0t] Starting UART TX and RX concurrently...", $time);
+        
+        // fork ~ join을 사용하여 송신과 수신을 동시에(병렬로) 실행합니다.
+        fork
+            // Thread 1: PC -> FPGA 16바이트 송신
+            begin
+                for (i = 0; i < 16; i = i + 1) begin
+                    uart_send(sensor_data[i]);
+                    $display("[%0t] Sent byte[%0d] = %0d", $time, i, sensor_data[i]);
+                end
+                $display("[%0t] All 16 bytes sent", $time);
+            end
 
-        $display("[%0t] Waiting for processing...", $time);
+            // Thread 2: FPGA -> PC 9바이트 수신 (FPGA가 너무 빨라 즉시 응답하므로 미리 대기)
+            begin
+                for (int j = 0; j < 9; j = j + 1) begin
+                    uart_receive(rx_buf[j]);
+                    $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, j, rx_buf[j], rx_buf[j]);
+                end
+            end
+        join
+        
+        $display("[%0t] All UART communication finished.", $time);
 
-        $display("[%0t] Capturing TX output...", $time);
-        for (i = 0; i < 9; i = i + 1) begin
-            uart_receive(rx_buf[i]);
-            $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, i, rx_buf[i], rx_buf[i]);
-        end
-
+        // 결과 출력
         $display("===== Results =====");
-        $display("Label     : %0d (%s)", rx_buf[0], rx_buf[0] ? "ABNORMAL" : "NORMAL");
+        // rx_buf[0]의 0번 비트는 Label, 1~2번 비트는 cause_index로 해석
+        $display("Label       : %0d (%s)", rx_buf[0][0], rx_buf[0][0] ? "ABNORMAL" : "NORMAL");
+        $display("Cause Index : %0d", rx_buf[0][2:1]);
+        // ... (나머지 col_sum 출력은 그대로 유지)
         $display("col_sum[0]: 0x%02X%02X", rx_buf[1], rx_buf[2]);
         $display("col_sum[1]: 0x%02X%02X", rx_buf[3], rx_buf[4]);
         $display("col_sum[2]: 0x%02X%02X", rx_buf[5], rx_buf[6]);
