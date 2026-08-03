@@ -66,29 +66,31 @@ module tb_top;
         rst_n = 1;
         #(CLK_PERIOD * 20);
 
-        // ===== 센서 데이터 설정 =====
-        // 정상 패턴: 온도 100, 압력 100, 진동 100, 전류 100 × 4 타임스텝
+        // ===== Test 1: 정상 패턴 =====
         $display("=== Test 1: Normal pattern (all 100) ===");
         for (i = 0; i < 16; i = i + 1)
             sensor_data[i] = 8'd100;
 
-        // 16바이트 UART 전송
-        $display("[%0t] Sending 16 bytes via UART...", $time);
-        for (i = 0; i < 16; i = i + 1) begin
-            uart_send(sensor_data[i]);
-            $display("[%0t] Sent byte[%0d] = %0d", $time, i, sensor_data[i]);
-        end
-        $display("[%0t] All 16 bytes sent", $time);
+        fork
+            // Thread 1: 16바이트 UART 송신
+            begin
+                $display("[%0t] Sending 16 bytes via UART...", $time);
+                for (int k = 0; k < 16; k = k + 1) begin
+                    uart_send(sensor_data[k]);
+                    $display("[%0t] Sent byte[%0d] = %0d", $time, k, sensor_data[k]);
+                end
+                $display("[%0t] All 16 bytes sent", $time);
+            end
 
-        // 처리 완료 대기
-        $display("[%0t] Waiting for processing...", $time);
-
-        // TX 출력 9바이트 수신
-        $display("[%0t] Capturing TX output...", $time);
-        for (i = 0; i < 9; i = i + 1) begin
-            uart_receive(rx_buf[i]);
-            $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, i, rx_buf[i], rx_buf[i]);
-        end
+            // Thread 2: 9바이트 UART 수신
+            begin
+                $display("[%0t] Capturing TX output...", $time);
+                for (int j = 0; j < 9; j = j + 1) begin
+                    uart_receive(rx_buf[j]);
+                    $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, j, rx_buf[j], rx_buf[j]);
+                end
+            end
+        join
 
         // 결과 출력
         $display("===== Results =====");
@@ -105,29 +107,35 @@ module tb_top;
         // ===== Test 2: 이상 패턴 =====
         $display("");
         $display("=== Test 2: Abnormal pattern (sensor0 = 250) ===");
-        // 센서0만 비정상적으로 높은 값
         for (i = 0; i < 16; i = i + 1) begin
             if (i % 4 == 0)
-                sensor_data[i] = 8'd250;  // 센서0: 이상
+                sensor_data[i] = 8'd250;
             else
-                sensor_data[i] = 8'd100;  // 나머지: 정상
+                sensor_data[i] = 8'd100;
         end
 
-        $display("[%0t] Sending 16 bytes via UART...", $time);
-        for (i = 0; i < 16; i = i + 1) begin
-            uart_send(sensor_data[i]);
-            $display("[%0t] Sent byte[%0d] = %0d", $time, i, sensor_data[i]);
-        end
-        $display("[%0t] All 16 bytes sent", $time);
+        fork
+            // Thread 1: 16바이트 UART 송신
+            begin
+                $display("[%0t] Sending 16 bytes via UART...", $time);
+                for (int k = 0; k < 16; k = k + 1) begin
+                    uart_send(sensor_data[k]);
+                    $display("[%0t] Sent byte[%0d] = %0d", $time, k, sensor_data[k]);
+                end
+                $display("[%0t] All 16 bytes sent", $time);
+            end
 
-        $display("[%0t] Waiting for processing...", $time);
+            // Thread 2: 9바이트 UART 수신
+            begin
+                $display("[%0t] Capturing TX output...", $time);
+                for (int j = 0; j < 9; j = j + 1) begin
+                    uart_receive(rx_buf[j]);
+                    $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, j, rx_buf[j], rx_buf[j]);
+                end
+            end
+        join
 
-        $display("[%0t] Capturing TX output...", $time);
-        for (i = 0; i < 9; i = i + 1) begin
-            uart_receive(rx_buf[i]);
-            $display("[%0t] TX byte[%0d] = 0x%02X (%0d)", $time, i, rx_buf[i], rx_buf[i]);
-        end
-
+        // 결과 출력
         $display("===== Results =====");
         $display("Label     : %0d (%s)", rx_buf[0], rx_buf[0] ? "ABNORMAL" : "NORMAL");
         $display("col_sum[0]: 0x%02X%02X", rx_buf[1], rx_buf[2]);

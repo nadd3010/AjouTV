@@ -75,5 +75,13 @@ add wave -radix hex sim:/*
 # add wave -radix hex sim:/tb_qkv_transform/k
 # add wave -radix hex sim:/tb_qkv_transform/v
 
+# ===== uart_tx 내부 디버그 신호 추가 =====
+add wave -radix unsigned /tb_top/uut/u_uart_tx/pkt_state
+add wave -radix unsigned /tb_top/uut/u_uart_tx/byte_idx
+add wave -radix hex /tb_top/uut/u_uart_tx/shift_reg
+add wave /tb_top/uut/u_uart_tx/byte_start
+add wave /tb_top/uut/u_uart_tx/byte_done
+add wave /tb_top/uut/u_uart_tx/done
+
 # ===== 실행 시간 =====
 run -all

@@ -80,15 +80,15 @@ module uart_tx (
     end
 
     // ===== 9바이트 프로토콜 FSM =====
-    // 전송 순서: label(1B) → col_sum[0] H/L → col_sum[1] H/L → col_sum[2] H/L → col_sum[3] H/L
     localparam PKT_IDLE = 4'd0;
-    localparam PKT_SEND = 4'd1;
-    localparam PKT_WAIT = 4'd2;
-    localparam PKT_DONE = 4'd3;
+    localparam PKT_LOAD = 4'd1;
+    localparam PKT_SEND = 4'd2;
+    localparam PKT_WAIT = 4'd3;
+    localparam PKT_DONE = 4'd4;
 
     reg [3:0]  pkt_state;
-    reg [3:0]  byte_idx;      // 0~8 (9바이트)
-    reg [7:0]  tx_buf [0:8];  // 9바이트 버퍼
+    reg [3:0]  byte_idx;
+    reg [7:0]  tx_buf [0:8];
 
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
@@ -104,19 +104,22 @@ module uart_tx (
             case (pkt_state)
                 PKT_IDLE: begin
                     if (start) begin
-                        // 9바이트 버퍼 구성
-                        tx_buf[0] <= {7'd0, label};                    // label
-                        tx_buf[1] <= col_sum[0][15:8];                 // col_sum[0] 상위
-                        tx_buf[2] <= col_sum[0][7:0];                  // col_sum[0] 하위
-                        tx_buf[3] <= col_sum[1][15:8];                 // col_sum[1] 상위
-                        tx_buf[4] <= col_sum[1][7:0];                  // col_sum[1] 하위
-                        tx_buf[5] <= col_sum[2][15:8];                 // col_sum[2] 상위
-                        tx_buf[6] <= col_sum[2][7:0];                  // col_sum[2] 하위
-                        tx_buf[7] <= col_sum[3][15:8];                 // col_sum[3] 상위
-                        tx_buf[8] <= col_sum[3][7:0];                  // col_sum[3] 하위
+                        tx_buf[0] <= {7'd0, label};
+                        tx_buf[1] <= col_sum[0][15:8];
+                        tx_buf[2] <= col_sum[0][7:0];
+                        tx_buf[3] <= col_sum[1][15:8];
+                        tx_buf[4] <= col_sum[1][7:0];
+                        tx_buf[5] <= col_sum[2][15:8];
+                        tx_buf[6] <= col_sum[2][7:0];
+                        tx_buf[7] <= col_sum[3][15:8];
+                        tx_buf[8] <= col_sum[3][7:0];
                         byte_idx  <= 4'd0;
-                        pkt_state <= PKT_SEND;
+                        pkt_state <= PKT_LOAD;
                     end
+                end
+
+                PKT_LOAD: begin
+                    pkt_state <= PKT_SEND;
                 end
 
                 PKT_SEND: begin
