@@ -58,9 +58,9 @@ always @(*) begin
         mac_v_elem = 34'sd0;
         
     for (dot = 0; dot < 4; dot = dot + 1) begin
-        mac_q_elem = mac_q_elem + (x[row_idx][dot] * w_q[dot][col_idx]);
-        mac_k_elem = mac_k_elem + (x[row_idx][dot] * w_k[dot][col_idx]);
-        mac_v_elem = mac_v_elem + (x[row_idx][dot] * w_v[dot][col_idx]);
+        mac_q_elem = mac_q_elem + ($signed(x[row_idx][dot]) * $signed(w_q[dot][col_idx]));
+        mac_k_elem = mac_k_elem + ($signed(x[row_idx][dot]) * $signed(w_k[dot][col_idx]));
+        mac_v_elem = mac_v_elem + ($signed(x[row_idx][dot]) * $signed(w_v[dot][col_idx]));
     end
 end
 
