@@ -6,13 +6,12 @@ module tb_softmax_lut;
     // 1. 입출력 신호 선언
     // DUT의 포트 선언에 맞춰 signed를 빼고 unsigned(기본값)로 통일합니다.
     // --------------------------------------------------------
-    logic        clk;
-    logic        rst_n;
-    logic        start;
-    logic [15:0] score [0:3][0:3];
-    
-    wire  [15:0] attn_weight [0:3][0:3];
-    wire         done;
+    reg                clk;
+    reg                rst_n;
+    reg                start;
+    reg  signed [15:0] score [0:3][0:3];       // ✅ signed 추가
+    wire signed [15:0] attn_weight [0:3][0:3]; // ✅ signed 추가
+    wire               done;
 
     // --------------------------------------------------------
     // 2. DUT (Device Under Test) 연결
