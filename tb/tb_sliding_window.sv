@@ -23,7 +23,7 @@ module tb_sliding_window;
     initial clk = 0;
     always #(CLK_PERIOD/2) clk = ~clk;
 
-    // 데이터 1개 전송 태스크
+    // 센서 데이터 1개 전송 태스크
     task send_data(input [15:0] val);
         begin
             @(posedge clk);
@@ -34,8 +34,30 @@ module tb_sliding_window;
         end
     endtask
 
+    // 1행(센서 4개) 전송 태스크
+    task send_row(input [15:0] s0, s1, s2, s3);
+        begin
+            send_data(s0);
+            send_data(s1);
+            send_data(s2);
+            send_data(s3);
+        end
+    endtask
+
+    // 검증용 태스크: window[row][col]이 expected와 일치하는지 확인
+    task check_cell(input integer row, col, input [15:0] expected, inout reg all_pass);
+        begin
+            if (window[row][col] == expected)
+                $display("[PASS] window[%0d][%0d] = 0x%04X", row, col, window[row][col]);
+            else begin
+                $display("[FAIL] window[%0d][%0d] = 0x%04X (expected 0x%04X)",
+                         row, col, window[row][col], expected);
+                all_pass = 0;
+            end
+        end
+    endtask
+
     integer i, j;
-    reg [15:0] expected;
     reg all_pass;
 
     initial begin
@@ -46,66 +68,196 @@ module tb_sliding_window;
         rst_n = 1;
         #(CLK_PERIOD * 5);
 
-        // ===== Test 1: 순차 데이터 0x0100 ~ 0x1000 =====
-        $display("=== Test 1: Sequential data ===");
-        for (i = 0; i < 4; i = i + 1) begin
-            for (j = 0; j < 4; j = j + 1) begin
-                send_data((i * 4 + j + 1) * 16'h0100);
-                // 예: [0][0]=0x0100, [0][1]=0x0200, ... [3][3]=0x1000
-            end
-        end
+        // =============================================================
+        // Test 1: 최초 4행 채움 전 window_ready가 안 뜨는지 확인
+        // =============================================================
+        $display("=== Test 1: No ready before 4 rows ===");
 
-        @(posedge clk); // window_ready 확인 대기
+        // 행 A: [0x0100, 0x0200, 0x0300, 0x0400]
+        send_row(16'h0100, 16'h0200, 16'h0300, 16'h0400);
         @(posedge clk);
-
-        // 결과 검증
-        all_pass = 1;
-        for (i = 0; i < 4; i = i + 1) begin
-            for (j = 0; j < 4; j = j + 1) begin
-                expected = (i * 4 + j + 1) * 16'h0100;
-                if (window[i][j] == expected)
-                    $display("[PASS] window[%0d][%0d] = 0x%04X", i, j, window[i][j]);
-                else begin
-                    $display("[FAIL] window[%0d][%0d] = 0x%04X (expected 0x%04X)", i, j, window[i][j], expected);
-                    all_pass = 0;
-                end
-            end
-        end
-
-        if (all_pass)
-            $display(">>> Test 1 PASSED <<<");
+        if (window_ready)
+            $display("[FAIL] window_ready asserted after only 1 row!");
         else
-            $display(">>> Test 1 FAILED <<<");
+            $display("[PASS] window_ready not asserted after 1 row");
 
-        #(CLK_PERIOD * 5);
+        // 행 B: [0x0500, 0x0600, 0x0700, 0x0800]
+        send_row(16'h0500, 16'h0600, 16'h0700, 16'h0800);
+        @(posedge clk);
+        if (window_ready)
+            $display("[FAIL] window_ready asserted after only 2 rows!");
+        else
+            $display("[PASS] window_ready not asserted after 2 rows");
 
-        // ===== Test 2: 두 번째 윈도우 (연속 전송) =====
-        $display("=== Test 2: Second window ===");
-        for (i = 0; i < 4; i = i + 1) begin
-            for (j = 0; j < 4; j = j + 1) begin
-                send_data(16'hFF00);  // 모든 값 255.0 (Q8.8)
-            end
-        end
+        // 행 C: [0x0900, 0x0A00, 0x0B00, 0x0C00]
+        send_row(16'h0900, 16'h0A00, 16'h0B00, 16'h0C00);
+        @(posedge clk);
+        if (window_ready)
+            $display("[FAIL] window_ready asserted after only 3 rows!");
+        else
+            $display("[PASS] window_ready not asserted after 3 rows");
 
+        $display(">>> Test 1 PASSED <<<");
+        #(CLK_PERIOD * 3);
+
+        // =============================================================
+        // Test 2: 4번째 행 입력 → 최초 window_ready 발생 및 내용 검증
+        //   기대 결과 (행0=가장 오래된, 행3=최신):
+        //   행0: A = [0x0100, 0x0200, 0x0300, 0x0400]
+        //   행1: B = [0x0500, 0x0600, 0x0700, 0x0800]
+        //   행2: C = [0x0900, 0x0A00, 0x0B00, 0x0C00]
+        //   행3: D = [0x0D00, 0x0E00, 0x0F00, 0x1000]
+        // =============================================================
+        $display("=== Test 2: First full window ===");
+
+        // 행 D: [0x0D00, 0x0E00, 0x0F00, 0x1000]
+        send_row(16'h0D00, 16'h0E00, 16'h0F00, 16'h1000);
         @(posedge clk);
         @(posedge clk);
 
         all_pass = 1;
-        for (i = 0; i < 4; i = i + 1) begin
-            for (j = 0; j < 4; j = j + 1) begin
-                if (window[i][j] == 16'hFF00)
-                    $display("[PASS] window[%0d][%0d] = 0x%04X", i, j, window[i][j]);
-                else begin
-                    $display("[FAIL] window[%0d][%0d] = 0x%04X (expected 0xFF00)", i, j, window[i][j]);
-                    all_pass = 0;
-                end
-            end
-        end
+        // 행0 = A (가장 오래된)
+        check_cell(0, 0, 16'h0100, all_pass);
+        check_cell(0, 1, 16'h0200, all_pass);
+        check_cell(0, 2, 16'h0300, all_pass);
+        check_cell(0, 3, 16'h0400, all_pass);
+        // 행1 = B
+        check_cell(1, 0, 16'h0500, all_pass);
+        check_cell(1, 1, 16'h0600, all_pass);
+        check_cell(1, 2, 16'h0700, all_pass);
+        check_cell(1, 3, 16'h0800, all_pass);
+        // 행2 = C
+        check_cell(2, 0, 16'h0900, all_pass);
+        check_cell(2, 1, 16'h0A00, all_pass);
+        check_cell(2, 2, 16'h0B00, all_pass);
+        check_cell(2, 3, 16'h0C00, all_pass);
+        // 행3 = D (최신)
+        check_cell(3, 0, 16'h0D00, all_pass);
+        check_cell(3, 1, 16'h0E00, all_pass);
+        check_cell(3, 2, 16'h0F00, all_pass);
+        check_cell(3, 3, 16'h1000, all_pass);
 
-        if (all_pass)
-            $display(">>> Test 2 PASSED <<<");
+        if (all_pass) $display(">>> Test 2 PASSED <<<");
+        else          $display(">>> Test 2 FAILED <<<");
+        #(CLK_PERIOD * 3);
+
+        // =============================================================
+        // Test 3: 5번째 행 입력 → FIFO 시프트 검증
+        //   행 E = [0xAA00, 0xBB00, 0xCC00, 0xDD00] 입력
+        //   기대 결과:
+        //   행0: B = [0x0500, 0x0600, 0x0700, 0x0800]  ← A가 밀려남
+        //   행1: C = [0x0900, 0x0A00, 0x0B00, 0x0C00]
+        //   행2: D = [0x0D00, 0x0E00, 0x0F00, 0x1000]
+        //   행3: E = [0xAA00, 0xBB00, 0xCC00, 0xDD00]  ← 새 행
+        // =============================================================
+        $display("=== Test 3: FIFO shift (5th row) ===");
+
+        send_row(16'hAA00, 16'hBB00, 16'hCC00, 16'hDD00);
+        @(posedge clk);
+        @(posedge clk);
+
+        all_pass = 1;
+        // 행0 = B (A가 밀려서 사라짐)
+        check_cell(0, 0, 16'h0500, all_pass);
+        check_cell(0, 1, 16'h0600, all_pass);
+        check_cell(0, 2, 16'h0700, all_pass);
+        check_cell(0, 3, 16'h0800, all_pass);
+        // 행1 = C
+        check_cell(1, 0, 16'h0900, all_pass);
+        check_cell(1, 1, 16'h0A00, all_pass);
+        check_cell(1, 2, 16'h0B00, all_pass);
+        check_cell(1, 3, 16'h0C00, all_pass);
+        // 행2 = D
+        check_cell(2, 0, 16'h0D00, all_pass);
+        check_cell(2, 1, 16'h0E00, all_pass);
+        check_cell(2, 2, 16'h0F00, all_pass);
+        check_cell(2, 3, 16'h1000, all_pass);
+        // 행3 = E (최신)
+        check_cell(3, 0, 16'hAA00, all_pass);
+        check_cell(3, 1, 16'hBB00, all_pass);
+        check_cell(3, 2, 16'hCC00, all_pass);
+        check_cell(3, 3, 16'hDD00, all_pass);
+
+        if (all_pass) $display(">>> Test 3 PASSED <<<");
+        else          $display(">>> Test 3 FAILED <<<");
+        #(CLK_PERIOD * 3);
+
+        // =============================================================
+        // Test 4: 6번째 행 입력 → 연속 FIFO 시프트 검증
+        //   행 F = [0x1100, 0x2200, 0x3300, 0x4400] 입력
+        //   기대 결과:
+        //   행0: C = [0x0900, 0x0A00, 0x0B00, 0x0C00]  ← B가 밀려남
+        //   행1: D = [0x0D00, 0x0E00, 0x0F00, 0x1000]
+        //   행2: E = [0xAA00, 0xBB00, 0xCC00, 0xDD00]
+        //   행3: F = [0x1100, 0x2200, 0x3300, 0x4400]  ← 새 행
+        // =============================================================
+        $display("=== Test 4: FIFO shift (6th row) ===");
+
+        send_row(16'h1100, 16'h2200, 16'h3300, 16'h4400);
+        @(posedge clk);
+        @(posedge clk);
+
+        all_pass = 1;
+        // 행0 = C
+        check_cell(0, 0, 16'h0900, all_pass);
+        check_cell(0, 1, 16'h0A00, all_pass);
+        check_cell(0, 2, 16'h0B00, all_pass);
+        check_cell(0, 3, 16'h0C00, all_pass);
+        // 행1 = D
+        check_cell(1, 0, 16'h0D00, all_pass);
+        check_cell(1, 1, 16'h0E00, all_pass);
+        check_cell(1, 2, 16'h0F00, all_pass);
+        check_cell(1, 3, 16'h1000, all_pass);
+        // 행2 = E
+        check_cell(2, 0, 16'hAA00, all_pass);
+        check_cell(2, 1, 16'hBB00, all_pass);
+        check_cell(2, 2, 16'hCC00, all_pass);
+        check_cell(2, 3, 16'hDD00, all_pass);
+        // 행3 = F (최신)
+        check_cell(3, 0, 16'h1100, all_pass);
+        check_cell(3, 1, 16'h2200, all_pass);
+        check_cell(3, 2, 16'h3300, all_pass);
+        check_cell(3, 3, 16'h4400, all_pass);
+
+        if (all_pass) $display(">>> Test 4 PASSED <<<");
+        else          $display(">>> Test 4 FAILED <<<");
+        #(CLK_PERIOD * 3);
+
+        // =============================================================
+        // Test 5: 리셋 후 다시 4행 채워야 ready가 뜨는지 확인
+        // =============================================================
+        $display("=== Test 5: Reset and refill ===");
+
+        rst_n = 0;
+        #(CLK_PERIOD * 3);
+        rst_n = 1;
+        #(CLK_PERIOD * 3);
+
+        // 3행만 보냄 → ready 안 떠야 함
+        send_row(16'h0100, 16'h0100, 16'h0100, 16'h0100);
+        send_row(16'h0200, 16'h0200, 16'h0200, 16'h0200);
+        send_row(16'h0300, 16'h0300, 16'h0300, 16'h0300);
+        @(posedge clk);
+        @(posedge clk);
+
+        if (window_ready)
+            $display("[FAIL] window_ready after reset with only 3 rows!");
         else
-            $display(">>> Test 2 FAILED <<<");
+            $display("[PASS] No window_ready after reset with 3 rows");
+
+        // 4번째 행 → ready 떠야 함
+        send_row(16'h0400, 16'h0400, 16'h0400, 16'h0400);
+        @(posedge clk);
+        @(posedge clk);
+
+        all_pass = 1;
+        check_cell(0, 0, 16'h0100, all_pass);
+        check_cell(1, 0, 16'h0200, all_pass);
+        check_cell(2, 0, 16'h0300, all_pass);
+        check_cell(3, 0, 16'h0400, all_pass);
+
+        if (all_pass) $display(">>> Test 5 PASSED <<<");
+        else          $display(">>> Test 5 FAILED <<<");
 
         #(CLK_PERIOD * 5);
         $display("=== All tests done ===");
