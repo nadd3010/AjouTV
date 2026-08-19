@@ -32,8 +32,8 @@ module top (
     wire        score_done;
 
     // softmax_lut
-    wire [15:0] attn_weight [0:3][0:3];
-    wire        softmax_done;
+    wire signed [15:0] attn_weight [0:3][0:3];
+    wire signed softmax_done;
 
     // attn_output
     wire [15:0] attn_out [0:3][0:3];

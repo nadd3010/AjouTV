@@ -13,7 +13,6 @@ vmap work work
 vlog -sv ../rtl/sliding_window/sliding_window.sv
 
 # --- attention_engine ---
-=======
 # vlog -sv ../rtl/attention_engine/qkv_transform.sv
 # vlog -sv ../rtl/attention_engine/score_compute.sv
 # vlog -sv ../rtl/attention_engine/softmax_lut.sv
