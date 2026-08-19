@@ -15,7 +15,7 @@ vmap work work
 # --- attention_engine ---
 #vlog -sv ../rtl/attention_engine/qkv_transform.sv
 #vlog -sv ../rtl/attention_engine/score_compute.sv
-vlog -sv ../rtl/attention_engine/softmax_lut.sv
+#vlog -sv ../rtl/attention_engine/softmax_lut.sv
 #vlog -sv ../rtl/attention_engine/attn_output.sv
 
 # --- classifier ---
@@ -32,7 +32,7 @@ vlog -sv ../rtl/attention_engine/softmax_lut.sv
 #vlog -sv ../rtl/control_fsm/main_sequencer.sv
 
 # --- top ---
-#vlog -sv ../rtl/top.sv
+vlog -sv ../rtl/top.sv
 
 # ===== 테스트벤치 컴파일 =====
 # vlog -sv ../tb/tb_uart_rx.sv
@@ -40,7 +40,7 @@ vlog -sv ../rtl/attention_engine/softmax_lut.sv
 # vlog -sv ../tb/tb_sliding_window.sv
 # vlog -sv ../tb/tb_qkv_transform.sv
 # vlog -sv ../tb/tb_score_compute.sv
-vlog -sv ../tb/tb_softmax_lut.sv
+#vlog -sv ../tb/tb_softmax_lut.sv
 # vlog -sv ../tb/tb_attn_output.sv
 # vlog -sv ../tb/tb_fc_layer.sv
 # vlog -sv ../tb/tb_argmax.sv
@@ -48,7 +48,7 @@ vlog -sv ../tb/tb_softmax_lut.sv
 # vlog -sv ../tb/tb_buzzer_driver.sv
 # vlog -sv ../tb/tb_uart_tx.sv
 # vlog -sv ../tb/tb_main_sequencer.sv
-# vlog -sv ../tb/tb_top.sv
+vlog -sv ../tb/tb_top.sv
 
 
 # ===== 시뮬레이션 실행 =====
@@ -57,7 +57,7 @@ vlog -sv ../tb/tb_softmax_lut.sv
 # vsim work.tb_sliding_window
 # vsim work.tb_qkv_transform
 # vsim work.tb_score_compute
-vsim work.tb_softmax_lut
+# vsim work.tb_softmax_lut
 # vsim work.tb_attn_output
 # vsim work.tb_fc_layer
 # vsim work.tb_argmax
@@ -65,7 +65,7 @@ vsim work.tb_softmax_lut
 # vsim work.tb_led_buzzer
 # vsim work.tb_uart_tx
 # vsim work.tb_main_sequencer
-# vsim work.tb_top
+vsim work.tb_top
 
 # ===== 파형 추가 =====
 add wave -radix hex sim:/*
