@@ -115,8 +115,7 @@ module softmax_lut (
                     exp_buffer[i][j]  <= 16'd0;
                 end
             end
-        end 
-        else begin
+        end else begin  
             case (state)
                 IDLE: begin
                     done <= 0;

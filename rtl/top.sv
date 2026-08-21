@@ -28,7 +28,7 @@ module top (
     wire        qkv_done;
 
     // score_compute
-    wire [15:0] score [0:3][0:3];
+    wire signed [15:0] score [0:3][0:3];
     wire        score_done;
 
     // softmax_lut
