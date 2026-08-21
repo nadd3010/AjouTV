@@ -10,7 +10,7 @@ vmap work work
 
 
 # --- sliding_window ---
-vlog -sv ../rtl/sliding_window/sliding_window.sv
+# vlog -sv ../rtl/sliding_window/sliding_window.sv
 
 # --- attention_engine ---
 # vlog -sv ../rtl/attention_engine/qkv_transform.sv
@@ -49,7 +49,7 @@ vlog -sv ../rtl/top.sv
 # vlog -sv ../tb/tb_uart_tx.sv
 # vlog -sv ../tb/tb_main_sequencer.sv
 vlog -sv ../tb/tb_top.sv
-
+# vlog -sv ../tb/tb_cause_identifier.sv
 
 # ===== 시뮬레이션 실행 =====
 # vsim work.tb_uart_rx

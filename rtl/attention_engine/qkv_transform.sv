@@ -13,7 +13,7 @@ module qkv_transform (
 
 // TODO: X  W_Q, W_K, W_V  Q, K, V 생성
 
-logic [15:0] weights_rom [0:47];   // .mem 파일 W_fc추가하면 [0:63]으로 바꾸기
+logic [15:0] weights_rom [0:47];   
 
 
 // 가중치 행렬
@@ -25,7 +25,11 @@ integer i, j;
 
 initial begin
 
-    $readmemh("../mem/weights.mem", weights_rom);
+
+    //*************** vivado 구울 때 경로 수정 ******************//
+    // $readmemh("../mem/weights.mem", weights_rom);       // modelsim 용 경로
+    $readmemh("weights.mem", weights_rom);       // vivado 용 경로
+    
 
 
     for (i=0; i < 4; i = i + 1) begin

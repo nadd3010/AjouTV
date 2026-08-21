@@ -48,4 +48,13 @@ module tb_qkv_transform;
         #20 $display("계산 완료! 파형 창에서 Q, K, V 결과를 확인하세요.");
         $finish;
     end
+    initial begin
+        #30; // 리셋이 풀리고 메모리가 로드될 때까지 약간 대기
+        $display("========================================");
+        $display("=== 🕵️‍♂️ ModelSim이 읽은 weights_rom 내부 데이터 ===");
+        for(int i=0; i<48; i++) begin
+            $display("w_fc[%0d] = %h", i, dut.weights_rom[i]);
+        end
+        $display("========================================");
+    end
 endmodule

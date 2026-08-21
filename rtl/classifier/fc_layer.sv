@@ -7,7 +7,7 @@ module fc_layer (
     output reg         done
 );
 
-    // 1. 상태 머신 정의 (SystemVerilog)
+    // 상태 머신 정의 (SystemVerilog)
     typedef enum logic [1:0] {
         IDLE = 2'b00,
         CALC = 2'b01,
@@ -16,18 +16,23 @@ module fc_layer (
     
     state_t state, next_state;
 
-    // 2. 내부 변수 및 메모리 선언
-    logic signed [15:0] w_fc [0:15]; // 1x16 가중치 ROM
+    logic [15:0] w_fc [0:15]; // 1x16 가중치 ROM
     logic [3:0]         idx;         // 0~15 순회용 카운터
     logic signed [35:0] mac_val;     // 누산기 (오버플로우 방지용 36비트 확장)
 
-    // 3. 가중치 초기화
+    // 가중치 초기화
     initial begin
-        // FC 가중치 메모리 로드 (.mem 파일 경로는 통합 기준에 맞춤)
-        $readmemh("../mem/fc_weights.mem", w_fc);
+
+
+    //*************** vivado 구울 때 경로 수정 ******************//
+        // $readmemh("../mem/fc_weights.mem", w_fc);   // modelsim 경로
+        $readmemh("../mem/fc_weights.mem", w_fc);   // vivado 경로
+    
+    
     end
 
-    // 4. 상태 머신 및 순차 회로 (MAC 연산)
+
+    // 상태 머신 및 순차 회로 (MAC 연산)
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state <= IDLE;
@@ -59,7 +64,7 @@ module fc_layer (
         end
     end
 
-    // 5. 다음 상태 결정 로직
+    // 다음 상태 결정 로직
     always_comb begin
         next_state = state;
         case (state)

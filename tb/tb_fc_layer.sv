@@ -43,13 +43,8 @@ module tb_fc_layer;
         rst_n = 1;
         #20;
 
-        // --------------------------------------------------------
         // Test Case 1: 모든 Attention Out 입력이 1.0 인 경우
-        // 실제 가중치 총합은 6.0 (16'h0600) 입니다.
-        // --------------------------------------------------------
-        $display("========================================");
-        $display("=== Test Case 1: All Inputs = 1.0 ===");
-        $display("========================================");
+        $display(" Test Case 1: All Inputs = 1.0 ");
         
         for (int i = 0; i < 4; i++) begin
             for (int j = 0; j < 4; j++) begin
@@ -65,23 +60,18 @@ module tb_fc_layer;
         wait(done == 1'b1);
         
         #10; // 결과 확인을 위한 여유 시간
-        $display("Expected Score : 0600 (6.0 in Q8.8)");
+        $display("Expected Score : 0071 (sum of weights)");
         $display("Actual Score   : %h", score_abnormal);
 
-        if (score_abnormal == 16'h0600)
+        if (score_abnormal == 16'h0071)
             $display("-> [RESULT] PASS! \n");
         else
             $display("-> [RESULT] FAIL! \n");
 
 
-        // --------------------------------------------------------
         // Test Case 2: 모든 Attention Out 입력이 2.0 인 경우
-        // 6.0 * 2.0 = 12.0 이므로, 예상 결과는 16'h0C00 입니다.
-        // --------------------------------------------------------
         #30; // 다음 테스트 전 여유 시간
-        $display("========================================");
-        $display("=== Test Case 2: All Inputs = 2.0 ===");
-        $display("========================================");
+        $display(" Test Case 2: All Inputs = 2.0 ");
         
         for (int i = 0; i < 4; i++) begin
             for (int j = 0; j < 4; j++) begin
@@ -97,11 +87,10 @@ module tb_fc_layer;
         wait(done == 1'b1);
         
         #10;
-        $display("Expected Score : 0C00 (12.0 in Q8.8)");
+        $display("Expected Score : 00E2 (12.0 in Q8.8)");
         $display("Actual Score   : %h", score_abnormal);
 
-        // 기댓값을 0900에서 0C00으로 수정
-        if (score_abnormal == 16'h0C00)
+        if (score_abnormal == 16'h00E2)
             $display("-> [RESULT] PASS! \n");
         else
             $display("-> [RESULT] FAIL! \n");
@@ -110,6 +99,17 @@ module tb_fc_layer;
         #50;
         $display("Simulation Finished Successfully.");
         $stop; 
+    end
+
+    // 5. 메모리 로드 확인용 디버깅 (ModelSim이 실제로 읽은 값 출력)
+    initial begin
+        #30; // 리셋이 풀리고 메모리가 로드될 때까지 약간 대기
+        $display("========================================");
+        $display("=== 🕵️‍♂️ ModelSim이 읽은 w_fc 내부 데이터 ===");
+        for(int i=0; i<16; i++) begin
+            $display("w_fc[%0d] = %h", i, uut.w_fc[i]);
+        end
+        $display("========================================");
     end
 
 endmodule

@@ -9,9 +9,7 @@ module softmax_lut (
     output reg         done
 );
 
-    // =====================================================================
     // 1. 상태 머신 (5단계 파이프라인으로 확장)
-    // =====================================================================
     typedef enum logic [2:0] {
         IDLE        = 3'b000,
         FIND_MAX    = 3'b001,  // 1. 최댓값 탐색 및 래치
@@ -26,25 +24,34 @@ module softmax_lut (
     logic [2:0] row_idx;
     logic [2:0] col_idx;
 
-    // =====================================================================
     // 2. ROM 선언 (EXP ROM & INV ROM)
-    // =====================================================================
     // 1) 분자 계산용 (e^(x-max)) ROM
     logic [15:0] exp_rom [0:255]; 
     initial begin
-        $readmemh("../mem/softmax_exp_rom.mem", exp_rom); // 이름 변경 권장
+
+
+    //*************** vivado 구울 때 경로 수정 ******************//
+        // $readmemh("../mem/softmax_exp_rom.mem", exp_rom);    // modelsim 경로 
+        $readmemh("softmax_exp_rom.mem", exp_rom);       // vivado 경로
+
+    
     end
 
     // 2) 분모 역수 계산용 (1/Sum) ROM
     // (Sum의 범위에 따라 ROM 크기가 달라질 수 있습니다. 우선 256칸으로 가정)
     logic [15:0] inv_rom [0:255]; 
     initial begin
-        $readmemh("../mem/softmax_inv_rom.mem", inv_rom);
+
+
+    //*************** vivado 구울 때 경로 수정 ******************//
+        // $readmemh("../mem/softmax_inv_rom.mem", inv_rom);   // modelsim 경로
+        $readmemh("../mem/softmax_inv_rom.mem", inv_rom);   // vivado 경로
+    
+    
     end
 
-    // =====================================================================
+
     // 3. Max Finder 및 EXP 연산 변수
-    // =====================================================================
     logic signed [15:0] next_max_score [0:3];
     logic signed [15:0] max_score_reg  [0:3]; 
     
@@ -82,9 +89,7 @@ module softmax_lut (
         end
     end
 
-    // =====================================================================
     // 4. 역수 및 DSP 곱셈 연산 변수
-    // =====================================================================
     logic [7:0]  inv_rom_index;
     logic [15:0] current_inv_val; // 읽어온 역수 값
     
@@ -94,9 +99,7 @@ module softmax_lut (
         inv_rom_index = exp_sum[row_idx][15:8]; 
     end
 
-    // =====================================================================
-    // 5. 순차 연산 FSM
-    // =====================================================================
+    // 5. 순차 연산 fsm_state
     always_ff @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state   <= IDLE;
