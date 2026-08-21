@@ -106,6 +106,7 @@ module softmax_lut (
             row_idx <= 0;
             col_idx <= 0;
             done    <= 0;
+            current_inv_val <= 16'd0;
             
             for (int i = 0; i < 4; i++) begin
                 max_score_reg[i] <= 16'd0;
@@ -115,7 +116,7 @@ module softmax_lut (
                     exp_buffer[i][j]  <= 16'd0;
                 end
             end
-        end else begin  
+        end else begin 
             case (state)
                 IDLE: begin
                     done <= 0;

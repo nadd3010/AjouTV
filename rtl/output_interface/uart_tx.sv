@@ -98,6 +98,10 @@ module uart_tx (
             byte_start <= 1'b0;
             shift_reg  <= 8'd0;
             done       <= 1'b0;
+
+            for (int i = 0; i < 9; i = i + 1) begin
+            tx_buf[i] <= 8'd0;
+            end
         end else begin
             done       <= 1'b0;
             byte_start <= 1'b0;
