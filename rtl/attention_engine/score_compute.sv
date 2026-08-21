@@ -6,7 +6,7 @@ module score_compute (
     input  wire        start,
     input  wire [15:0] q [0:3][0:3],
     input  wire [15:0] k [0:3][0:3],
-    output reg  [15:0] score [0:3][0:3],
+    output reg  signed [15:0] score [0:3][0:3],
     output reg         done
 );
 
