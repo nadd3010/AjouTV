@@ -1,61 +1,105 @@
 module sliding_window (
     input  wire        clk,
     input  wire        rst_n,
-    input  wire [15:0] sensor_data,    // Q8.8 from input_scaler
+
+    // sensor0 -> sensor1 -> sensor2 -> sensor3 순서로 들어온다고 가정
+    input  wire [15:0] sensor_data,   // Q8.8 from input_scaler
     input  wire        data_valid,
-    output reg  [15:0] window [0:3][0:3],
+
+    // window[sensor][time]
+    // row 0 = sensor 0의 최근 4시점
+    // row 1 = sensor 1의 최근 4시점
+    // row 2 = sensor 2의 최근 4시점
+    // row 3 = sensor 3의 최근 4시점
+    output reg [15:0] window [0:3][0:3],
+
     output reg         window_ready
 );
 
-    reg [1:0] col_cnt;       // 0~3: 현재 행 내 센서 인덱스
-    reg [2:0] row_filled;    // 채워진 행 수 (0~4 표현 위해 3비트)
-    reg [15:0] row_buf [0:3]; // 현재 수신 중인 1행 임시 버퍼
+    // 현재 수신 중인 센서 번호
+    reg [1:0] sensor_cnt;
+
+    // 현재까지 완성된 time-step 수
+    reg [2:0] time_filled;
+
+    // 현재 시점의 4개 센서 값을 임시 저장
+    reg [15:0] sensor_buf [0:3];
 
     integer i, j;
 
     always @(posedge clk or negedge rst_n) begin
+
         if (!rst_n) begin
-            col_cnt      <= 2'd0;
-            row_filled   <= 3'd0;
+
+            sensor_cnt   <= 2'd0;
+            time_filled  <= 3'd0;
             window_ready <= 1'b0;
+
             for (i = 0; i < 4; i = i + 1) begin
-                row_buf[i] <= 16'd0;
-                for (j = 0; j < 4; j = j + 1)
+                sensor_buf[i] <= 16'd0;
+
+                for (j = 0; j < 4; j = j + 1) begin
                     window[i][j] <= 16'd0;
+                end
             end
+
         end else begin
-            window_ready <= 1'b0;  // 기본값: 1클럭 펄스
+
+            // 기본적으로 0, 새로운 window가 완성될 때만 1클럭 HIGH
+            window_ready <= 1'b0;
 
             if (data_valid) begin
-                // 현재 행 버퍼에 센서 데이터 저장
-                row_buf[col_cnt] <= sensor_data;
 
-                if (col_cnt == 2'd3) begin
-                    // 1행 완성 → FIFO 시프트
-                    // 기존 행들을 한 칸씩 위로 밀기 (행0이 가장 오래된 데이터)
-                    // 행0 ← 행1 ← 행2 ← 행3 ← 새 행
-                    for (i = 0; i < 3; i = i + 1)
-                        for (j = 0; j < 4; j = j + 1)
-                            window[i][j] <= window[i+1][j];
+                // 현재 시점의 센서 값 저장
+                sensor_buf[sensor_cnt] <= sensor_data;
 
-                    // 새 행을 맨 아래(행3)에 삽입
-                    window[3][0] <= row_buf[0];
-                    window[3][1] <= row_buf[1];
-                    window[3][2] <= row_buf[2];
-                    window[3][3] <= sensor_data;  // 마지막 센서는 방금 받은 값
+                // sensor 3까지 받으면 한 시점의 데이터 완성
+                if (sensor_cnt == 2'd3) begin
 
-                    col_cnt <= 2'd0;
+                    // -----------------------------------------
+                    // Sensor × Time Sliding Window
+                    //
+                    // 각 sensor row 내부에서 time을 shift
+                    //
+                    // [t1 t2 t3 t4]
+                    //      ↓
+                    // [t2 t3 t4 t5]
+                    // -----------------------------------------
 
-                    // 채워진 행 수 추적
-                    if (row_filled < 3'd4)
-                        row_filled <= row_filled + 3'd1;
+                    for (i = 0; i < 4; i = i + 1) begin
+                        for (j = 0; j < 3; j = j + 1) begin
+                            window[i][j] <= window[i][j+1];
+                        end
+                    end
 
-                    // 4행 이상 채워졌으면 매번 ready
-                    if (row_filled >= 3'd3)  // 다음 클럭에서 4가 되므로 3에서 판정
+                    // -----------------------------------------
+                    // 가장 최신 시점 값을 마지막 column에 삽입
+                    // -----------------------------------------
+
+                    window[0][3] <= sensor_buf[0];
+                    window[1][3] <= sensor_buf[1];
+                    window[2][3] <= sensor_buf[2];
+
+                    // 마지막 센서는 non-blocking assignment 때문에
+                    // sensor_buf[3]이 아직 이전 값이므로
+                    // 현재 sensor_data를 직접 사용
+                    window[3][3] <= sensor_data;
+
+                    sensor_cnt <= 2'd0;
+
+                    // 최초 4개 time-step이 채워질 때까지 count
+                    if (time_filled < 3'd4)
+                        time_filled <= time_filled + 3'd1;
+
+                    // 최초 4번째 시점부터 매 새로운 시점마다
+                    // 새로운 4×4 window 생성
+                    if (time_filled >= 3'd3)
                         window_ready <= 1'b1;
 
                 end else begin
-                    col_cnt <= col_cnt + 2'd1;
+
+                    sensor_cnt <= sensor_cnt + 2'd1;
+
                 end
             end
         end
