@@ -10,7 +10,6 @@ module cause_identifier (
     logic [17:0] temp_col_sum [0:3];
     logic [1:0]  max_idx;
     logic [17:0] max_val;
-    integer i, j;
 
    // 1. 센서별 Attention Score 합산 (열 합산)
     always_comb begin

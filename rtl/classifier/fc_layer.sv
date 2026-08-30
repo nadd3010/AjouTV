@@ -52,7 +52,7 @@ module fc_layer (
                 CALC: begin
                     // 2차원 배열(attn_out)을 1차원 인덱스(idx)로 분할 접근 (4x4 = 16)
                     // idx[3:2]는 행(row, 0~3), idx[1:0]는 열(col, 0~3)에 해당
-                    mac_val <= mac_val + ($signed(attn_out[idx[3:2]][idx[1:0]]) * w_fc[idx]);
+                    mac_val <= mac_val + ($signed(attn_out[idx[3:2]][idx[1:0]]) * $signed(w_fc[idx]));
                     idx <= idx + 1'b1;
                 end
                 DONE: begin
@@ -71,6 +71,7 @@ module fc_layer (
             IDLE: if (start) next_state = CALC;
             CALC: if (idx == 4'd15) next_state = DONE; // 16번 누적 연산 후 완료
             DONE: next_state = IDLE;
+            default: next_state = IDLE;
         endcase
     end
 

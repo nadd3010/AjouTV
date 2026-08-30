@@ -57,8 +57,20 @@ always_ff @(posedge clk or negedge rst_n) begin
 
             CALC: begin
                 // 곱셈 누적으로 확장된 비트 폭에서 [23:8]을 잘라 Q8.8 포맷 유지
-                attn_out[row_idx][col_idx] <= mac_val[23:8];
+                if (mac_val[33:23] == 11'b00000000000 || mac_val[33:23] == 11'b11111111111) begin
+                    // (안전) 오버플로우 없음: 정상적으로 비트 슬라이싱
+                    attn_out[row_idx][col_idx] <= mac_val[23:8];
+                end 
+                else if (mac_val[33] == 1'b0) begin
+                    // (위험) 양수 방향 오버플로우 발생: Q8.8의 최대 양수(+127.99)로 고정
+                    attn_out[row_idx][col_idx] <= 16'h7FFF; 
+                end 
+                else begin
+                    // (위험) 음수 방향 언더플로우 발생: Q8.8의 최대 음수(-128.00)로 고정
+                    attn_out[row_idx][col_idx] <= 16'h8000; 
+                end
 
+                
                 // 인덱스 카운터 제어 (4x4 행렬 순회)
                 if (col_idx == 3) begin
                     col_idx <= 0;
