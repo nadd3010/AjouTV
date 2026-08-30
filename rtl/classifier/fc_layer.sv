@@ -26,7 +26,7 @@ module fc_layer (
 
     //*************** vivado 구울 때 경로 수정 ******************//
         // $readmemh("../mem/fc_weights.mem", w_fc);   // modelsim 경로
-        $readmemh("../mem/fc_weights.mem", w_fc);   // vivado 경로
+        $readmemh("fc_weights.mem", w_fc);   // vivado 경로
     
     
     end
