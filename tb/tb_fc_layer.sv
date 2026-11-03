@@ -1,115 +1,63 @@
 `timescale 1ns / 1ps
 
+// ============================================================================
+// tb_fc_layer (res_square 구조용으로 교체한 단위 테스트)
+//   골든 모델이 만든 attn_out(exp_ao.mem)과 window(vec_x.mem)를 fc_layer 에 직접 넣고 z(exp_z.mem)와 비교한다.
+//   상류 모듈의 영향 없이 fc_layer 만 검증한다.  (make_rtl_vectors.py 가 만든 키트가 있는 폴더에서 실행)
+// ============================================================================
 module tb_fc_layer;
 
-    // 1. DUT 연결용 포트 선언
-    logic        clk;
-    logic        rst_n;
-    logic        start;
-    logic [15:0] attn_out [0:3][0:3];
-    
-    logic [15:0] score_abnormal;
-    logic        done;
+    localparam MAXW = 1024;
+    reg clk = 0, rst_n = 0, start = 0;
+    always #5 clk = ~clk;
 
-    // 2. DUT(Design Under Test) 인스턴스화
-    fc_layer uut (
-        .clk(clk),
-        .rst_n(rst_n),
-        .start(start),
-        .attn_out(attn_out),
-        .score_abnormal(score_abnormal),
-        .done(done)
-    );
+    reg [15:0] nmem [0:0];
+    reg [15:0] vx  [0:MAXW*16-1];
+    reg [15:0] e_ao [0:MAXW*16-1];
+    reg [15:0] e_z [0:MAXW-1];
+    reg [15:0] attn_out [0:3][0:3];
+    reg [15:0] x        [0:3][0:3];
+    wire [15:0] score_abnormal;
+    wire done;
+    integer n, w, i, j, bad, timeout;
 
-    // 3. 클럭 생성 (100MHz 기준, 10ns 주기)
+    fc_layer uut (.clk(clk), .rst_n(rst_n), .start(start), .attn_out(attn_out), .x(x),
+                  .score_abnormal(score_abnormal), .done(done));
+
     initial begin
-        clk = 0;
-        forever #5 clk = ~clk;
-    end
-
-    // 4. 테스트 시나리오 입력 및 자동 검증
-    initial begin
-        // 초기화
-        rst_n = 0;
-        start = 0;
-        for (int i = 0; i < 4; i++) begin
-            for (int j = 0; j < 4; j++) begin
-                attn_out[i][j] = 16'd0;
-            end
-        end
-
-        // 리셋 해제
+        $readmemh("vec_n.mem", nmem);
+        n = nmem[0];
+        $readmemh("vec_x.mem",  vx,   0, n*16-1);
+        $readmemh("exp_ao.mem", e_ao, 0, n*16-1);
+        $readmemh("exp_z.mem",  e_z,  0, n-1);
+        bad = 0;
+        for (i = 0; i < 4; i = i + 1) for (j = 0; j < 4; j = j + 1) begin attn_out[i][j] = 0; x[i][j] = 0; end
+        #20 rst_n = 1;
         #20;
-        rst_n = 1;
-        #20;
-
-        // Test Case 1: 모든 Attention Out 입력이 1.0 인 경우
-        $display(" Test Case 1: All Inputs = 1.0 ");
-        
-        for (int i = 0; i < 4; i++) begin
-            for (int j = 0; j < 4; j++) begin
-                attn_out[i][j] = 16'h0100; 
+        for (w = 0; w < n; w = w + 1) begin
+            for (i = 0; i < 4; i = i + 1)
+                for (j = 0; j < 4; j = j + 1) begin
+                    attn_out[i][j] = e_ao[w*16 + i*4 + j];
+                    x[i][j]        = vx[w*16 + i*4 + j];
+                end
+            @(posedge clk); #1 start = 1;
+            @(posedge clk); #1 start = 0;
+            timeout = 0;
+            while (!done && timeout < 100) begin @(posedge clk); timeout = timeout + 1; end
+            #1;
+            if (score_abnormal !== e_z[w]) begin
+                bad = bad + 1;
+                if (bad <= 5) $display("  [불일치] 윈도우 %0d: RTL=%h 기대=%h", w, score_abnormal, e_z[w]);
             end
+            repeat (3) @(posedge clk);
         end
-        
-        start = 1;
-        #10;
-        start = 0; // 1클럭 start 펄스 인가
-
-        // 연산이 끝날 때까지 대기
-        wait(done == 1'b1);
-        
-        #10; // 결과 확인을 위한 여유 시간
-        $display("Expected Score : 0071 (sum of weights)");
-        $display("Actual Score   : %h", score_abnormal);
-
-        if (score_abnormal == 16'h0071)
-            $display("-> [RESULT] PASS! \n");
-        else
-            $display("-> [RESULT] FAIL! \n");
-
-
-        // Test Case 2: 모든 Attention Out 입력이 2.0 인 경우
-        #30; // 다음 테스트 전 여유 시간
-        $display(" Test Case 2: All Inputs = 2.0 ");
-        
-        for (int i = 0; i < 4; i++) begin
-            for (int j = 0; j < 4; j++) begin
-                attn_out[i][j] = 16'h0200; // 2.0
-            end
-        end
-        
-        start = 1;
-        #10;
-        start = 0;
-
-        // 연산 대기
-        wait(done == 1'b1);
-        
-        #10;
-        $display("Expected Score : 00E2 (12.0 in Q8.8)");
-        $display("Actual Score   : %h", score_abnormal);
-
-        if (score_abnormal == 16'h00E2)
-            $display("-> [RESULT] PASS! \n");
-        else
-            $display("-> [RESULT] FAIL! \n");
-
-        // 시뮬레이션 종료
-        #50;
-        $display("Simulation Finished Successfully.");
-        $stop; 
+        $display("fc_layer 단위 테스트: %0d개 중 불일치 %0d개 -> %0s", n, bad, (bad == 0) ? "PASS" : "FAIL");
+        // 부호 확인: 모든 attn_out = 0x0040(0.25), x = 0 일 때 예전 RTL 은 부호 오류로 z 의 최상위 비트가 켜졌다 (0x801C).
+        $display("(참고) fc_weights.mem[0] = %h, 바이어스 fc_extra.mem[0] = %h", uut.w_fc[0], uut.fc_extra[0]);
+`ifdef __ICARUS__
+        $finish;
+`else
+        $stop;
+`endif
     end
-
-    // 5. 메모리 로드 확인용 디버깅 (ModelSim이 실제로 읽은 값 출력)
-    initial begin
-        #30; // 리셋이 풀리고 메모리가 로드될 때까지 약간 대기
-        $display("========================================");
-        $display("=== 🕵️‍♂️ ModelSim이 읽은 w_fc 내부 데이터 ===");
-        for(int i=0; i<16; i++) begin
-            $display("w_fc[%0d] = %h", i, uut.w_fc[i]);
-        end
-        $display("========================================");
-    end
-
 endmodule

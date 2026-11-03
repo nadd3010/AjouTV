@@ -38,8 +38,9 @@ module softmax_lut (
     end
 
     // 2) 분모 역수 계산용 (1/Sum) ROM
-    // (Sum의 범위에 따라 ROM 크기가 달라질 수 있습니다. 우선 256칸으로 가정)
-    logic [15:0] inv_rom [0:255]; 
+    // [수정 3] softmax_inv_rom.mem 은 1025칸이다 (make_inverse_rom.py: inv[i] = 65536 / i, i = 합의 Q8.8 원시값 0~1024).
+    //          합은 최대 4 x 0x0100 = 0x0400 이므로 11비트 주소(0~1024)로 충분하다.
+    logic [15:0] inv_rom [0:1024]; 
     initial begin
 
 
@@ -77,7 +78,9 @@ module softmax_lut (
     wire signed [15:0] shifted_score = score[row_idx][col_idx] - max_score_reg[row_idx];
     logic [7:0]  exp_rom_index;
     logic [15:0] abs_score;
-    localparam SLICE_START = 4; 
+    // [수정 4] softmax_exp_rom.mem 은 [-8, 0] 을 256칸으로 나눈 것(make_lut.py)이라 한 칸이 약 1/32 = 8 원시값.
+    //          따라서 SLICE_START = 3 (예전 4 는 한 칸을 1/16 로 읽어 softmax 가 2배 평평해졌다)
+    localparam SLICE_START = 3; 
 
     always_comb begin
         if (shifted_score < -($signed(16'd255) << SLICE_START)) begin
@@ -90,13 +93,18 @@ module softmax_lut (
     end
 
     // 4. 역수 및 DSP 곱셈 연산 변수
-    logic [7:0]  inv_rom_index;
+    logic [10:0] inv_rom_index;
     logic [15:0] current_inv_val; // 읽어온 역수 값
     
-    // 18비트 Sum 값을 8비트 ROM 주소로 매핑하는 스케일링 (SW팀과 조율 필요)
+    // [수정 3] 합(Sum)의 Q8.8 원시값을 그대로 11비트 주소로 사용 (예전에는 [15:8], 즉 정수부 0~4만 사용)
     always_comb begin
-        // 예시: 상위 비트를 잘라서 0~255로 매핑 (데이터 분포에 따라 시프트 값 변경 필요)
-        inv_rom_index = exp_sum[row_idx][15:8]; 
+        inv_rom_index = exp_sum[row_idx][10:0];
+    end
+
+    // [수정 2] 곱을 32비트로 계산한다. (예전: 16비트 문맥에서 곱이 계산되어 65536 이상이면 >>8 전에 잘림)
+    logic [31:0] mul_full;
+    always_comb begin
+        mul_full = exp_buffer[row_idx][col_idx] * current_inv_val;
     end
 
     // 5. 순차 연산 fsm_state
@@ -178,8 +186,7 @@ module softmax_lut (
                 CALC_MUL: begin
                     // 💡 [DSP 사용] 버퍼에 있던 분자값 * 읽어온 역수값 (Q8.8 * Q8.8 = Q16.16)
                     // 곱셈 결과를 Q8.8로 다시 맞추기 위해 >> 8 (비트 시프트) 수행
-                    attn_weight[row_idx][col_idx] <= 
-                        (exp_buffer[row_idx][col_idx] * current_inv_val) >> 8;
+                    attn_weight[row_idx][col_idx] <= mul_full[23:8];   // = (곱 >> 8) 의 하위 16비트
                     
                     if (col_idx == 3) begin
                         if (row_idx == 3) begin
