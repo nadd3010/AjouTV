@@ -16,7 +16,7 @@ module fc_layer (
     
     state_t state, next_state;
 
-    logic [15:0] w_fc [0:15]; // 1x16 가중치 ROM
+    logic signed [15:0] w_fc [0:15]; // 1x16 가중치 ROM
     logic [3:0]         idx;         // 0~15 순회용 카운터
     logic signed [35:0] mac_val;     // 누산기 (오버플로우 방지용 36비트 확장)
 

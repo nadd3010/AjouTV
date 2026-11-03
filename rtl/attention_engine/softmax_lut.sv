@@ -39,7 +39,7 @@ module softmax_lut (
 
     // 2) 분모 역수 계산용 (1/Sum) ROM
     // (Sum의 범위에 따라 ROM 크기가 달라질 수 있습니다. 우선 256칸으로 가정)
-    logic [15:0] inv_rom [0:255]; 
+    logic [15:0] inv_rom [0:1024]; 
     initial begin
 
 
@@ -77,7 +77,7 @@ module softmax_lut (
     wire signed [15:0] shifted_score = score[row_idx][col_idx] - max_score_reg[row_idx];
     logic [7:0]  exp_rom_index;
     logic [15:0] abs_score;
-    localparam SLICE_START = 4; 
+    localparam SLICE_START = 3; 
 
     always_comb begin
         if (shifted_score < -($signed(16'd255) << SLICE_START)) begin
@@ -90,14 +90,16 @@ module softmax_lut (
     end
 
     // 4. 역수 및 DSP 곱셈 연산 변수
-    logic [7:0]  inv_rom_index;
+    logic [10:0]  inv_rom_index;
     logic [15:0] current_inv_val; // 읽어온 역수 값
     
     // 18비트 Sum 값을 8비트 ROM 주소로 매핑하는 스케일링 (SW팀과 조율 필요)
     always_comb begin
-        // 예시: 상위 비트를 잘라서 0~255로 매핑 (데이터 분포에 따라 시프트 값 변경 필요)
-        inv_rom_index = exp_sum[row_idx][15:8]; 
-    end
+        if (exp_sum[row_idx] > 18'd1024)
+            inv_rom_index = 11'd1024;
+        else
+            inv_rom_index = exp_sum[row_idx][10:0];
+        end
 
     // 5. 순차 연산 fsm_state
     always_ff @(posedge clk or negedge rst_n) begin
