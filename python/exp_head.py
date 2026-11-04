@@ -43,6 +43,9 @@ SPECS = {
     "res_mlp8":   dict(front="attn", res=True,  head="mlp",    H=8,  label="attention + 잔차 + MLP(은닉 8)"),
     "mlp16":      dict(front="attn", res=False, head="mlp",    H=16, label="attention + MLP(은닉 16)"),
     "raw_mlp16":  dict(front="raw",  res=False, head="mlp",    H=16, label="attention 없이 MLP(은닉 16), 대조군"),
+    "rtl":        dict(front="attn", res=False, head="linear", H=0,  label="기본 RTL 구조 (attention + 선형 FC, 바이어스 없음)"),
+    "uniform_res_square": dict(front="attn", res=True, head="square", H=0, uniform=True,
+                               label="균등 attention(1/4 고정) + 잔차 + 제곱 머리 (대조군)"),
     "raw_square": dict(front="raw",  res=False, head="square", H=0,  label="attention 없이 X^2 . w + b, 대조군"),
     "raw_mlp8":   dict(front="raw",  res=False, head="mlp",    H=8,  label="attention 없이 MLP(은닉 8), 대조군"),
 }
@@ -61,6 +64,8 @@ def auc(y, s):
 def cost(spec):
     """(파라미터 수, 머리의 곱셈-누적 횟수) 추정. attention 앞단은 모두 48개 가중치."""
     p = 48 if spec["front"] == "attn" else 0
+    if spec["head"] == "linear":
+        return p + 16, 16
     if spec["head"] == "square":
         return p + 17, 16 + 16          # 제곱 16 + 가중치 곱 16
     h = spec["H"]
@@ -81,7 +86,9 @@ def make_net(spec):
                 self.wq = nn.Parameter(torch.randn(4, 4) * 0.3)
                 self.wk = nn.Parameter(torch.randn(4, 4) * 0.3)
                 self.wv = nn.Parameter(torch.randn(4, 4) * 0.3)
-            if spec["head"] == "square":
+            if spec["head"] == "linear":
+                self.wfc = nn.Parameter(torch.randn(16) * 0.1)
+            elif spec["head"] == "square":
                 self.wfc = nn.Parameter(torch.randn(16) * 0.1)
                 self.b = nn.Parameter(torch.zeros(()))
             else:
@@ -94,6 +101,8 @@ def make_net(spec):
                 q, k, v = x @ self.wq, x @ self.wk, x @ self.wv
                 s = (q @ k.transpose(1, 2)) / 2.0
                 a = torch.softmax(s, dim=-1)
+                if spec.get("uniform"):
+                    a = torch.full_like(a, 0.25)           # 대조군: attention 가중치를 균등(1/4)으로 고정 -> 센서 평균 문맥만 남김
                 o = a @ v
                 if spec["res"]:
                     o = o + x                          # 잔차 연결: 센서 i 의 원래 시간값을 더해 줌
@@ -101,7 +110,9 @@ def make_net(spec):
                 f = o.reshape(x.shape[0], 16)
             else:
                 f = x.reshape(x.shape[0], 16)
-            if spec["head"] == "square":
+            if spec["head"] == "linear":
+                z = f @ self.wfc                           # 바이어스 없음 (현재 RTL)
+            elif spec["head"] == "square":
                 sq = f ** 2
                 z = sq @ self.wfc + self.b
                 mids.append(sq)

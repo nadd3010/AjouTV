@@ -457,11 +457,20 @@ def main():
                                  te["y"], te["cause"], mem_dir=args.mem_dir)
     print_rows(rows, rng)
     loo = loo_compare_q88(w, te["X"].astype(np.float64), te["X_q88"].astype(np.int64), te["y"], te["cause"],
-                          mem_dir=args.mem_dir)
+                          mem_dir=args.mem_dir, atype=te.get("atype"))
     print(f"\n=== leave-one-out 원인 센서 (센서 행을 0 으로 바꿨을 때 점수가 가장 많이 줄어드는 센서), 이상 윈도우 {loo['n']:,}개 ===")
     print(f"  정확도: FP32 {loo['acc32']:.3f}, Q8.8(RTL 수정 4가지 적용) {loo['acc88']:.3f}, 무작위 0.25 | "
           f"FP32와 Q8.8 선택 일치 {loo['agree']:.3f}")
     print(f"  1위-2위 감소량 차이(중앙값): FP32 {loo['margin32']:.3f}, Q8.8 {loo['margin88']:.3f}  (Q8.8 해상도 0.004 보다 충분히 커야 안정적)")
+    print(f"  모델이 이상으로 판정한 윈도우만(RTL 임계값 0.5): 비율 FP32 {loo['det_frac32']:.3f} / Q8.8 {loo['det_frac88']:.3f}, "
+          f"정확도 FP32 {loo['acc32_det']:.3f} / Q8.8 {loo['acc88_det']:.3f}")
+    f32, f88 = loo["flip32"], loo["flip88"]
+    print(f"  [정답 없이 가능한 검증] 탐지된 윈도우에서 센서 하나를 정상값(0)으로 바꿨을 때 정상 판정으로 바뀌는 비율")
+    print(f"      선택한 센서: FP32 {f32[0]:.3f} / Q8.8 {f88[0]:.3f} | 무작위 센서: FP32 {f32[1]:.3f} / Q8.8 {f88[1]:.3f} "
+          f"| (참고) 합성 정답 센서: FP32 {f32[2]:.3f} / Q8.8 {f88[2]:.3f}")
+    if "by_type" in loo:
+        names = {0: "offset", 1: "ramp", 2: "swap_cond"}
+        print("  이상 종류별 정확도(FP32 / Q8.8): " + ", ".join(f"{names.get(t, t)} {a:.3f}/{b:.3f}" for t, (a, b) in sorted(loo["by_type"].items())))
 
     export_mem(args.out, w)
     with open(os.path.join(args.out, "results.json"), "w", encoding="utf-8") as f:

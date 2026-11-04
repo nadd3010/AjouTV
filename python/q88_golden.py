@@ -260,7 +260,7 @@ def _zero_row(x, r):
     return x2
 
 
-def loo_compare_q88(w, X, Xq, y, cause, mem_dir=None):
+def loo_compare_q88(w, X, Xq, y, cause, mem_dir=None, atype=None, thr=0.5):
     """Leave-one-sensor-out 원인 센서: 센서 r 의 행을 0(Train 평균)으로 바꿨을 때 이상 점수가 가장 많이 줄어드는 센서.
     (교수님 5번의 perturbation 방식. 하드웨어에서는 파이프라인을 센서마다 한 번씩 더 돌리면 된다.)
     FP32 와 Q8.8(RTL 수정 4가지 적용) 결과를 이상 윈도우에서 비교한다."""
@@ -279,9 +279,28 @@ def loo_compare_q88(w, X, Xq, y, cause, mem_dir=None):
     p32, p88 = d32.argmax(axis=1), d88.argmax(axis=1)
     m32 = np.sort(d32, axis=1)
     m88 = np.sort(d88, axis=1)
-    return dict(n=int(len(ca)), acc32=float((p32 == ca).mean()), acc88=float((p88 == ca).mean()),
-                agree=float((p32 == p88).mean()),
-                margin32=float(np.median(m32[:, -1] - m32[:, -2])), margin88=float(np.median(m88[:, -1] - m88[:, -2])))
+    out = dict(n=int(len(ca)), acc32=float((p32 == ca).mean()), acc88=float((p88 == ca).mean()),
+               agree=float((p32 == p88).mean()),
+               margin32=float(np.median(m32[:, -1] - m32[:, -2])), margin88=float(np.median(m88[:, -1] - m88[:, -2])))
+    # 모델이 이상으로 판정한 윈도우만 (운영에서 원인 센서가 의미 있는 경우): FP32 는 z > thr, Q8.8 은 RTL 라벨
+    det32 = z0 > thr
+    det88 = (s0 > THRESHOLD_Q88) if thr == 0.5 else (s0 / 256.0 > thr)
+    out["det_frac32"], out["det_frac88"] = float(det32.mean()), float(det88.mean())
+    out["acc32_det"] = float((p32[det32] == ca[det32]).mean()) if det32.any() else float("nan")
+    out["acc88_det"] = float((p88[det88] == ca[det88]).mean()) if det88.any() else float("nan")
+    # 정답 없이 가능한 검증(반사실): 탐지된 윈도우에서 선택한 센서를 정상값(0)으로 바꾸면 정상 판정으로 바뀌는가?
+    #   flip[r] = 센서 r 을 바꾼 뒤 점수가 임계값 이하가 되는지.  선택 센서 vs 무작위 센서(4개 평균) 비교.
+    def _flip(det, drops, pick, base, thr_v):
+        fl = (base[:, None] - drops) <= thr_v
+        idx = np.arange(len(pick))
+        return (float(fl[idx, pick][det].mean()), float(fl[det].mean()), float(fl[idx, ca][det].mean())) if det.any() else (float("nan"),) * 3
+    out["flip32"] = _flip(det32, d32, p32, z0, thr)
+    out["flip88"] = _flip(det88, d88, p88, s0 / 256.0, THRESHOLD_Q88 / 256.0)
+    if atype is not None:
+        at = atype[anom]
+        out["by_type"] = {int(t): (float((p32[at == t] == ca[at == t]).mean()), float((p88[at == t] == ca[at == t]).mean()))
+                          for t in np.unique(at)}
+    return out
 
 
 def print_rows(rows, rng=None):
