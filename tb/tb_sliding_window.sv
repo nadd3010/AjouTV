@@ -2,7 +2,7 @@
 
 module tb_sliding_window;
 
-    localparam CLK_PERIOD = 20; // 50MHz
+    localparam CLK_PERIOD = 10; // 50MHz
 
     reg         clk;
     reg         rst_n;

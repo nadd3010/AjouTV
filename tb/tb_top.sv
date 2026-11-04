@@ -2,7 +2,7 @@
 
 module tb_top;
 
-    localparam CLK_PERIOD = 20;       // 50MHz
+    localparam CLK_PERIOD = 10;       // 50MHz
     localparam BIT_PERIOD = 8680;     // 115200 baud
 
     reg        clk;
@@ -110,6 +110,19 @@ module tb_top;
         $display("Buzzer    : %0b", buzzer);
 
         #(CLK_PERIOD * 100);
+
+        
+        // Test 1의 UART 송신 완료 대기
+        @(posedge uut.tx_done);
+
+        // Test 2를 독립적으로 검증하기 위해 초기화
+        @(negedge clk);
+        rst_n = 1'b0;
+
+        repeat (5) @(negedge clk);
+        rst_n = 1'b1;
+
+        repeat (5) @(negedge clk);
 
         // ===== Test 2: 이상 패턴 =====
         $display("");

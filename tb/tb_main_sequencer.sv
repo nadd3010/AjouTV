@@ -2,7 +2,7 @@
 
 module tb_main_sequencer;
 
-    localparam CLK_PERIOD = 20;
+    localparam CLK_PERIOD = 10;
 
     reg        clk;
     reg        rst_n;
