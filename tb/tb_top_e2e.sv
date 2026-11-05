@@ -104,14 +104,14 @@ module tb_top_e2e;
                     if (uut.window[s][t] !== ewin[attn_count*16 + s*4 + t]) begin
                         bad = bad + 1;
                         if (shown_win < 6) begin
-                            $display("  [입력경로 불일치] window %0d [센서%0d][시점%0d]: RTL=%h 기대=%h", attn_count, s, t,
+                            $display("  [INPUT PATH MISMATCH] window %0d [sensor%0d][step%0d]: RTL=%h exp=%h", attn_count, s, t,
                                      uut.window[s][t], ewin[attn_count*16 + s*4 + t]);
                             shown_win = shown_win + 1;
                         end
                     end
             if (bad != 0) win_bad = win_bad + 1;
         end else begin
-            $display("  [경고] 예상보다 많은 window 가 처리됨: attn_start %0d 번째 (기대 %0d개)", attn_count + 1, W);
+            $display("  [WARN] more windows processed than expected: attn_start #%0d (expected %0d)", attn_count + 1, W);
         end
         attn_count = attn_count + 1;
     end
@@ -122,7 +122,7 @@ module tb_top_e2e;
             if (uut.score_abnormal !== ez[txs_count]) begin
                 z_bad = z_bad + 1;
                 if (shown_z < 6) begin
-                    $display("  [코어 불일치] window %0d: score RTL=%h 기대=%h", txs_count, uut.score_abnormal, ez[txs_count]);
+                    $display("  [CORE MISMATCH] window %0d: score RTL=%h exp=%h", txs_count, uut.score_abnormal, ez[txs_count]);
                     shown_z = shown_z + 1;
                 end
             end
@@ -142,14 +142,14 @@ module tb_top_e2e;
                     if (rb !== eresp[r*9 + j]) begin
                         bad = bad + 1;
                         if (shown_resp < 8) begin
-                            $display("  [응답 불일치] window %0d 바이트 %0d: RTL=%02X 기대=%02X", r, j, rb, eresp[r*9 + j]);
+                            $display("  [RESPONSE MISMATCH] window %0d byte %0d: RTL=%02X exp=%02X", r, j, rb, eresp[r*9 + j]);
                             shown_resp = shown_resp + 1;
                         end
                     end
                 end
                 if (bad != 0) resp_win_bad = resp_win_bad + 1;
                 resp_count = r + 1;
-                if ((r + 1) % 10 == 0) $display("[%0t] window %0d/%0d 확인", $time, r + 1, W);
+                if ((r + 1) % 10 == 0) $display("[%0t] window %0d/%0d checked", $time, r + 1, W);
             end
         end
     endtask
@@ -168,7 +168,7 @@ module tb_top_e2e;
                         wd = wd + 1;
                     end
                     if (resp_count < (k - 2)) begin
-                        $display("[오류] 시점 %0d 이후 응답이 오지 않음 (timeout). 지금까지 응답 %0d개, 처리된 window %0d개, fsm_state=%0d",
+                        $display("[ERROR] no response after step %0d (timeout). responses so far %0d, windows processed %0d, fsm_state=%0d",
                                  k, resp_count, attn_count, uut.fsm_state);
                         k = T;     // 중단
                     end
@@ -183,7 +183,7 @@ module tb_top_e2e;
         T = nmem[0];
         W = nmem[1];
         if (T > MAXT || W != T - 3) begin
-            $display("[오류] e2e_n.mem 의 값이 이상합니다 (T=%0d, W=%0d, MAXT=%0d)", T, W, MAXT);
+            $display("[ERROR] bad values in e2e_n.mem (T=%0d, W=%0d, MAXT=%0d)", T, W, MAXT);
             $finish;
         end
         $readmemh("uart_bytes.mem", ubytes, 0, T*4 - 1);
@@ -200,7 +200,7 @@ module tb_top_e2e;
         rst_n = 1;
         #(CLK_PERIOD * 20);
 
-        $display("=== E2E 검증 시작: 시점 %0d개, window %0d개 (CLK %0d ns, BIT %0d ns) ===", T, W, CLK_PERIOD, BIT_PERIOD);
+        $display("=== E2E check start: %0d steps, %0d windows (CLK %0d ns, BIT %0d ns) ===", T, W, CLK_PERIOD, BIT_PERIOD);
         fork
             run_sender;
             run_receiver;
@@ -208,17 +208,17 @@ module tb_top_e2e;
 
         #(BIT_PERIOD * 5);
         $display("====================================================");
-        $display(" 통합 검증 결과: window %0d개 중 처리 %0d개, 응답 수신 %0d개", W, attn_count, resp_count);
-        $display("  입력 경로(UART->scaler->window)   불일치 %0d  %0s", win_bad,      (win_bad == 0)      ? "PASS" : "FAIL");
-        $display("  코어(score_abnormal)               불일치 %0d  %0s", z_bad,        (z_bad == 0)        ? "PASS" : "FAIL");
-        $display("  출력 경로(UART 응답 9바이트)       불일치 %0d  %0s", resp_win_bad, (resp_win_bad == 0) ? "PASS" : "FAIL");
+        $display(" Integration result: of %0d windows, processed %0d, responses received %0d", W, attn_count, resp_count);
+        $display("  input path (UART->scaler->window)  mismatches %0d  %0s", win_bad,      (win_bad == 0)      ? "PASS" : "FAIL");
+        $display("  core (score_abnormal)              mismatches %0d  %0s", z_bad,        (z_bad == 0)        ? "PASS" : "FAIL");
+        $display("  output path (UART 9-byte response) mismatches %0d  %0s", resp_win_bad, (resp_win_bad == 0) ? "PASS" : "FAIL");
         if (win_bad == 0 && z_bad == 0 && resp_win_bad == 0 && attn_count == W && resp_count == W)
             $display(" [RESULT] ALL PASS");
         else begin
             $display(" [RESULT] FAIL");
-            if (win_bad != 0)       $display("   -> 입력 경로부터 확인: input_scaler(Q4.4), uart_rx, sliding_window");
-            else if (z_bad != 0)    $display("   -> 입력 경로는 일치. 코어 쪽 확인(이미 단위/코어 검증이 통과했다면 .mem 파일 위치나 가중치 불일치 의심)");
-            else                    $display("   -> 코어까지 일치. 출력 경로 확인: argmax, cause_identifier, uart_tx");
+            if (win_bad != 0)       $display("   -> check input path first: input_scaler(Q4.4), uart_rx, sliding_window");
+            else if (z_bad != 0)    $display("   -> input path matches. Check the core (if unit/core checks already passed, suspect .mem location or weight mismatch)");
+            else                    $display("   -> core matches. Check output path: argmax, cause_identifier, uart_tx");
         end
         $display("====================================================");
 `ifdef __ICARUS__
@@ -232,7 +232,7 @@ module tb_top_e2e;
     initial begin
         #(64'd3000000 * 100);
         if (!done_flag) begin
-            $display("[오류] 전체 시간 제한 초과");
+            $display("[ERROR] global timeout exceeded");
 `ifdef __ICARUS__
             $finish;
 `else

@@ -47,13 +47,13 @@ module tb_fc_layer;
             #1;
             if (score_abnormal !== e_z[w]) begin
                 bad = bad + 1;
-                if (bad <= 5) $display("  [불일치] 윈도우 %0d: RTL=%h 기대=%h", w, score_abnormal, e_z[w]);
+                if (bad <= 5) $display("  [MISMATCH] window %0d: RTL=%h exp=%h", w, score_abnormal, e_z[w]);
             end
             repeat (3) @(posedge clk);
         end
-        $display("fc_layer 단위 테스트: %0d개 중 불일치 %0d개 -> %0s", n, bad, (bad == 0) ? "PASS" : "FAIL");
+        $display("fc_layer unit test: %0d windows, %0d mismatches -> %0s", n, bad, (bad == 0) ? "PASS" : "FAIL");
         // 부호 확인: 모든 attn_out = 0x0040(0.25), x = 0 일 때 예전 RTL 은 부호 오류로 z 의 최상위 비트가 켜졌다 (0x801C).
-        $display("(참고) fc_weights.mem[0] = %h, 바이어스 fc_extra.mem[0] = %h", uut.w_fc[0], uut.fc_extra[0]);
+        $display("(note) fc_weights.mem[0] = %h, bias fc_extra.mem[0] = %h", uut.w_fc[0], uut.fc_extra[0]);
 `ifdef __ICARUS__
         $finish;
 `else

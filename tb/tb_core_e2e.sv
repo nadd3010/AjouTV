@@ -96,7 +96,7 @@ module tb_core_e2e;
                 if (got[e] !== exp_v) begin
                     mism = mism + 1;
                     if (shown[stage] < 3) begin
-                        $display("  [불일치] %0s 윈도우 %0d 원소 %0d: RTL=%h 기대=%h", sname[stage], win, e, got[e], exp_v);
+                        $display("  [MISMATCH] %0s window %0d elem %0d: RTL=%h exp=%h", sname[stage], win, e, got[e], exp_v);
                         shown[stage] = shown[stage] + 1;
                     end
                 end
@@ -113,7 +113,7 @@ module tb_core_e2e;
         $readmemh("vec_n.mem", nmem);
         n = nmem[0];
         if (n > MAXW) begin
-            $display("[오류] 윈도우 수 %0d 가 MAXW(%0d)를 넘습니다. MAXW 를 늘리세요.", n, MAXW);
+            $display("[ERROR] window count %0d exceeds MAXW(%0d). Increase MAXW.", n, MAXW);
             $finish;
         end
         $readmemh("vec_x.mem",     vx,      0, n*16-1);
@@ -148,7 +148,7 @@ module tb_core_e2e;
                 @(posedge clk); timeout = timeout + 1;
             end
             if (timeout >= 3000) begin
-                $display("[오류] 윈도우 %0d: classify_done 이 오지 않음 (타임아웃). fsm_state=%0d", w, fsm_state);
+                $display("[ERROR] window %0d: classify_done never arrived (timeout). fsm_state=%0d", w, fsm_state);
                 $finish;
             end
 
@@ -172,7 +172,7 @@ module tb_core_e2e;
             if (score_abnormal !== e_z[w]) begin
                 bad[6] = bad[6] + 1;
                 if (shown[6] < 5) begin
-                    $display("  [불일치] z 윈도우 %0d: RTL=%h 기대=%h", w, score_abnormal, e_z[w]);
+                    $display("  [MISMATCH] z window %0d: RTL=%h exp=%h", w, score_abnormal, e_z[w]);
                     shown[6] = shown[6] + 1;
                 end
             end
@@ -190,10 +190,10 @@ module tb_core_e2e;
 
         $fclose(fd);
         $display("====================================================");
-        $display(" 코어 데이터패스 검증: 윈도우 %0d개", n);
+        $display(" Core datapath check: %0d windows", n);
         for (s = 0; s < 9; s = s + 1)
-            $display("  %0s : 불일치 윈도우 %0d / %0d  %0s", sname[s], bad[s], n, (bad[s] == 0) ? "PASS" : "FAIL");
-        $display("  지연(window_ready -> classify_done): 최소 %0d / 평균 %0d / 최대 %0d 클럭 (100MHz 이면 평균 약 %0d ns)",
+            $display("  %0s : mismatched windows %0d / %0d  %0s", sname[s], bad[s], n, (bad[s] == 0) ? "PASS" : "FAIL");
+        $display("  latency (window_ready -> classify_done): min %0d / avg %0d / max %0d clocks (avg about %0d ns at 100MHz)",
                  lat_min, lat_sum / n, lat_max, (lat_sum / n) * 10);
         t = 0;
         for (s = 0; s < 9; s = s + 1) t = t + bad[s];
