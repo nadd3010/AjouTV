@@ -1,6 +1,6 @@
 # ModelSim 실행 스크립트 (최종 검증: 코어 데이터패스 + fc_layer + softmax_lut)
 #
-# 사용법:  quit -sim  /  cd <AjouTV>/sim  /  do run_kit.do
+# 사용법:  quit -sim  /  cd <AjouTV>/sim  /  do run_kit.do   (ModelSim 은 do 안에서 스크립트 위치를 알려주지 않아, 현재 폴더가 sim 이어야 한다)
 #   1) 경로는 이 스크립트 위치(AjouTV/sim)를 기준으로 자동 계산한다.
 #   2) 테스트 입력과 기대값은 키트(python/kit_fixed, make_rtl_vectors.py 결과)에서 읽는다.
 #   3) 모델 .mem 5개(weights, fc_weights, fc_extra, softmax_exp_rom, softmax_inv_rom)는 저장소 mem/ 의 파일을
@@ -12,6 +12,7 @@
 set _s [info script]
 if {$_s eq ""} { set SIM_DIR [pwd] } else { set SIM_DIR [file dirname [file normalize $_s]] }
 set REPO   [file normalize "$SIM_DIR/.."]
+if {![file exists "$REPO/rtl/top.sv"]} { echo "(ERROR) repo not found from $SIM_DIR. In ModelSim run: cd <AjouTV>/sim   then run this script again"; return }
 set KIT    "$REPO/python/kit_fixed"
 set MEMDIR "$REPO/mem"
 set DEFS   "+define+PATCHED"
@@ -64,5 +65,8 @@ vlog -sv $REPO/rtl/attention_engine/softmax_lut.sv $REPO/tb/tb_softmax_lut_vec.s
 vsim work.tb_softmax_lut_vec
 run -all
 quit -sim
+
+# 다음 스크립트(run_e2e.do)가 sim 폴더에서 시작할 수 있게 작업 폴더를 되돌린다
+cd $SIM_DIR
 
 echo "=== done: check the RESULT line and the unit test PASS lines in the transcript ==="

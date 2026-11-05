@@ -8,7 +8,11 @@ dataset*/
 *_eval*/
 sig_*/
 kit_*/
+!kit_fixed/
+!kit_e2e/
 _local_archive/
 *.csv
 baseline_eval_*
 model_eval_*
+modelsim.ini
+rtl_trace.txt
