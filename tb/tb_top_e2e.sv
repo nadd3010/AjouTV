@@ -12,11 +12,11 @@
 //      (2) tx_start 시점의 uut.score_abnormal      vs 기대 점수     -> 코어 점검
 //      (3) UART 로 받은 응답 9바이트               vs 기대 응답     -> 출력 경로(argmax, cause_identifier, uart_tx) 점검
 //
-//  클럭/보레이트: 기본은 현재 저장소(50MHz, 115200). 100MHz 로 바꾸면 컴파일 옵션으로 지정한다.
+//  클럭/보레이트: 기본은 현재 저장소(100MHz, 115200). 100MHz 로 바꾸면 컴파일 옵션으로 지정한다.
 //      vlog +define+CLK_PERIOD_NS=10 +define+BIT_PERIOD_NS=8680 ...
 // ============================================================================
 `ifndef CLK_PERIOD_NS
-`define CLK_PERIOD_NS 20
+`define CLK_PERIOD_NS 10
 `endif
 `ifndef BIT_PERIOD_NS
 `define BIT_PERIOD_NS 8680
@@ -64,7 +64,7 @@ module tb_top_e2e;
     integer attn_count;       // attn_start 횟수 (= 처리된 window 수)
     integer txs_count;        // tx_start 횟수
     integer shown_win, shown_z, shown_resp;
-    reg     done_flag;
+    reg     done_flag = 0;
 
     // ---------------- UART ----------------
     task uart_send(input [7:0] data);
@@ -179,17 +179,17 @@ module tb_top_e2e;
 
     initial begin
         // 벡터 읽기
-        $readmemh("e2e_n.mem", nmem);
+        $readmemh("../python/kit_e2e/e2e_n.mem", nmem);
         T = nmem[0];
         W = nmem[1];
         if (T > MAXT || W != T - 3) begin
             $display("[ERROR] bad values in e2e_n.mem (T=%0d, W=%0d, MAXT=%0d)", T, W, MAXT);
             $finish;
         end
-        $readmemh("uart_bytes.mem", ubytes, 0, T*4 - 1);
-        $readmemh("e2e_win.mem",   ewin,   0, W*16 - 1);
-        $readmemh("e2e_z.mem",     ez,     0, W - 1);
-        $readmemh("e2e_resp.mem",  eresp,  0, W*9 - 1);
+        $readmemh("../python/kit_e2euart_bytes.mem", ubytes, 0, T*4 - 1);
+        $readmemh("../python/kit_e2ee2e_win.mem",   ewin,   0, W*16 - 1);
+        $readmemh("../python/kit_e2ee2e_z.mem",     ez,     0, W - 1);
+        $readmemh("../python/kit_e2ee2e_resp.mem",  eresp,  0, W*9 - 1);
 
         resp_count = 0; resp_win_bad = 0; win_bad = 0; z_bad = 0; attn_count = 0; txs_count = 0;
         shown_win = 0; shown_z = 0; shown_resp = 0; done_flag = 0;
@@ -199,7 +199,7 @@ module tb_top_e2e;
         #(CLK_PERIOD * 20);
         rst_n = 1;
         #(CLK_PERIOD * 20);
-
+        done_flag = 1;
         $display("=== E2E check start: %0d steps, %0d windows (CLK %0d ns, BIT %0d ns) ===", T, W, CLK_PERIOD, BIT_PERIOD);
         fork
             run_sender;
