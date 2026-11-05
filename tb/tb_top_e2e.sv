@@ -186,10 +186,10 @@ module tb_top_e2e;
             $display("[ERROR] bad values in e2e_n.mem (T=%0d, W=%0d, MAXT=%0d)", T, W, MAXT);
             $finish;
         end
-        $readmemh("../python/kit_e2euart_bytes.mem", ubytes, 0, T*4 - 1);
-        $readmemh("../python/kit_e2ee2e_win.mem",   ewin,   0, W*16 - 1);
-        $readmemh("../python/kit_e2ee2e_z.mem",     ez,     0, W - 1);
-        $readmemh("../python/kit_e2ee2e_resp.mem",  eresp,  0, W*9 - 1);
+        $readmemh("../python/kit_e2e/uart_bytes.mem", ubytes, 0, T*4 - 1);
+        $readmemh("../python/kit_e2e/e2e_win.mem",   ewin,   0, W*16 - 1);
+        $readmemh("../python/kit_e2e/e2e_z.mem",     ez,     0, W - 1);
+        $readmemh("../python/kit_e2e/e2e_resp.mem",  eresp,  0, W*9 - 1);
 
         resp_count = 0; resp_win_bad = 0; win_bad = 0; z_bad = 0; attn_count = 0; txs_count = 0;
         shown_win = 0; shown_z = 0; shown_resp = 0; done_flag = 0;
