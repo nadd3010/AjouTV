@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+cache/
+dataset*/
+*_out/
+*_out2/
+*_out_*/
+*_eval*/
+sig_*/
+kit_*/
+_local_archive/
+*.csv
+baseline_eval_*
+model_eval_*

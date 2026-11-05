@@ -2,7 +2,7 @@
 
 module tb_uart_tx;
 
-    localparam CLK_PERIOD = 20;
+    localparam CLK_PERIOD = 10;
     localparam BIT_PERIOD = 8680;
 
     reg         clk;
@@ -10,6 +10,7 @@ module tb_uart_tx;
     reg         start;
     reg         label;
     reg  [17:0] col_sum [0:3];
+    reg  [1:0]  cause_index;
     wire        tx;
     wire        done;
 
@@ -18,6 +19,7 @@ module tb_uart_tx;
         .rst_n(rst_n),
         .start(start),
         .label(label),
+        .cause_index(cause_index),
         .col_sum(col_sum),
         .tx(tx),
         .done(done)
@@ -66,7 +68,7 @@ module tb_uart_tx;
             start      = 1'b0;
 
             // 기대값 구성 (상위 2비트 버림 → [15:0] 전송)
-            exp[0] = {7'd0, t_label};
+            exp[0] = {5'd0, t_cause_index, t_label};
             exp[1] = t_cs0[15:8];
             exp[2] = t_cs0[7:0];
             exp[3] = t_cs1[15:8];

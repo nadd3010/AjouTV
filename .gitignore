@@ -24,3 +24,9 @@ __pycache__/
 *.qdb
 *.hw/
 *.ip_user_files/
+
+# python 관련
+python/cache/
+python/dataset*/
+python/*_out*/
+python/*_eval*/

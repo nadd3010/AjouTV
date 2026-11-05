@@ -1,0 +1,95 @@
+{
+  "sensors": [
+    "ETCHBEAMVOLTAGE",
+    "IONGAUGEPRESSURE",
+    "ETCHGASCHANNEL1READBACK",
+    "FLOWCOOLPRESSURE"
+  ],
+  "layout": "X[sample, sensor, time] = (N, 4, 4)",
+  "mean": [
+    0.5225688815116882,
+    0.5832288265228271,
+    0.5587482452392578,
+    0.33326324820518494
+  ],
+  "std": [
+    0.7373576760292053,
+    0.37344294786453247,
+    0.38771766424179077,
+    0.9956437349319458
+  ],
+  "obs_min": [
+    -1.2632665634155273,
+    -1.557353138923645,
+    -1.6581313610076904,
+    -1.2860738039016724
+  ],
+  "obs_max": [
+    1.49850594997406,
+    1.0997867584228516,
+    0.9333759546279907,
+    9.12615966796875
+  ],
+  "atypes": [
+    "offset",
+    "ramp",
+    "swap_cond"
+  ],
+  "cause_index": "0..3 = 센서 행 인덱스, -1 = 정상",
+  "splits": {
+    "train": [
+      "03_M02",
+      "09_M01"
+    ],
+    "val": [
+      "03_M02",
+      "09_M01"
+    ],
+    "test": [
+      "03_M02",
+      "09_M01"
+    ]
+  },
+  "files": [
+    "03_M02",
+    "09_M01"
+  ],
+  "params": {
+    "cache": "cache",
+    "out": "dataset_t",
+    "per_file": 60000,
+    "normal_min": 86400,
+    "since_min": 21600,
+    "normal_local": 0.0,
+    "etch_only": true,
+    "tools": [
+      "03_M02",
+      "09_M01"
+    ],
+    "split": "time",
+    "val_frac": 0.15,
+    "test_frac": 0.15,
+    "time_gap": 86400,
+    "per_tool_norm": false,
+    "clip_z": 8.0,
+    "obs_pct": 0.1,
+    "mag_lo": 0.5,
+    "mag_hi": 1.5,
+    "min_eff": 0.3,
+    "seed": 0,
+    "n_vectors": 64
+  },
+  "split_mode": "time",
+  "time_bounds": {
+    "03_M02": {
+      "val_start": 38462630.4,
+      "test_start": 41263079.6,
+      "gap": 86400
+    },
+    "09_M01": {
+      "val_start": 29931386.4,
+      "test_start": 36696109.6,
+      "gap": 86400
+    }
+  }
+}

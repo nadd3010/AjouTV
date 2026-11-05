@@ -2,8 +2,8 @@
 
 module tb_uart_rx;
 
-    // 50MHz → 주기 20ns
-    localparam CLK_PERIOD   = 20;
+    // 50MHz → 주기 20ns -> 100MHz 주기 10ns
+    localparam CLK_PERIOD   = 10;
     // 115200 baud → 1비트 = 8680ns
     localparam BIT_PERIOD   = 8680;
 

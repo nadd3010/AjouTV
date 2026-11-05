@@ -9,8 +9,8 @@ module uart_tx (
     output reg         done
 );
 
-    // 50MHz / 115200 baud
-    localparam CLKS_PER_BIT = 434;
+    // 50MHz / 115200 baud -> 100MHz로 434에서 868
+    localparam CLKS_PER_BIT = 868;
 
     // ===== 내부 바이트 전송 FSM =====
     localparam BIT_IDLE  = 2'd0;
@@ -19,7 +19,7 @@ module uart_tx (
     localparam BIT_STOP  = 2'd3;
 
     reg [1:0]  bit_state;
-    reg [8:0]  clk_cnt;
+    reg [9:0]  clk_cnt; // [8:0 ]-> [9:0]
     reg [2:0]  bit_idx;
     reg [7:0]  shift_reg;
     reg        byte_done;
@@ -30,7 +30,7 @@ module uart_tx (
         if (!rst_n) begin
             bit_state <= BIT_IDLE;
             tx        <= 1'b1;
-            clk_cnt   <= 9'd0;
+            clk_cnt   <= 10'd0;
             bit_idx   <= 3'd0;
             byte_done <= 1'b0;
         end else begin
@@ -41,40 +41,40 @@ module uart_tx (
                     tx <= 1'b1;
                     if (byte_start) begin
                         bit_state <= BIT_START;
-                        clk_cnt   <= 9'd0;
+                        clk_cnt   <= 10'd0;
                     end
                 end
 
                 BIT_START: begin
                     tx <= 1'b0;
                     if (clk_cnt == CLKS_PER_BIT - 1) begin
-                        clk_cnt <= 9'd0;
+                        clk_cnt <= 10'd0;
                         bit_idx <= 3'd0;
                         bit_state <= BIT_DATA;
                     end else
-                        clk_cnt <= clk_cnt + 9'd1;
+                        clk_cnt <= clk_cnt + 10'd1;
                 end
 
                 BIT_DATA: begin
                     tx <= shift_reg[bit_idx];
                     if (clk_cnt == CLKS_PER_BIT - 1) begin
-                        clk_cnt <= 9'd0;
+                        clk_cnt <= 10'd0;
                         if (bit_idx == 3'd7)
                             bit_state <= BIT_STOP;
                         else
                             bit_idx <= bit_idx + 3'd1;
                     end else
-                        clk_cnt <= clk_cnt + 9'd1;
+                        clk_cnt <= clk_cnt + 10'd1;
                 end
 
                 BIT_STOP: begin
                     tx <= 1'b1;
                     if (clk_cnt == CLKS_PER_BIT - 1) begin
-                        clk_cnt   <= 9'd0;
+                        clk_cnt   <= 10'd0;
                         byte_done <= 1'b1;
                         bit_state <= BIT_IDLE;
                     end else
-                        clk_cnt <= clk_cnt + 9'd1;
+                        clk_cnt <= clk_cnt + 10'd1;
                 end
             endcase
         end

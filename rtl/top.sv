@@ -145,6 +145,7 @@ module top (
         .rst_n(rst_n),
         .start(classify_start),
         .attn_out(attn_out),
+        .x(window),                 // [구조 변경] 잔차 연결용: qkv_transform 에 들어간 것과 같은 window
         .score_abnormal(score_abnormal),
         .done(classify_done)
     );

@@ -1,14 +1,14 @@
 module uart_rx (
-    input  wire        clk,        // 50MHz
+    input  wire        clk,        // 50MHz -> 100MHz
     input  wire        rst_n,      // active-low 리셋
     input  wire        rx,         // UART 수신 라인
     output reg  [7:0]  data_out,   // 수신된 8비트 데이터
     output reg         data_valid  // 1클럭 동안 HIGH
 );
 
-    // 50MHz / 115200 = 434 클럭/비트
-    localparam CLKS_PER_BIT = 434;
-    localparam HALF_BIT     = 217;
+    // 50MHz / 115200 = 434 클럭/비트 -> 100MHz / 115200 = 868 클럭/비트
+    localparam CLKS_PER_BIT = 868;
+    localparam HALF_BIT     = 434;
 
     // FSM 상태 정의
     localparam IDLE          = 3'd0;
@@ -18,7 +18,7 @@ module uart_rx (
     localparam DONE          = 3'd4;
 
     reg [2:0]  state;
-    reg [8:0]  clk_count;    // 최대 434까지 카운트
+    reg [9:0]  clk_count;    // 최대 434까지 카운트 [8:0] -> 최대 868까지 카운트 하기 위해 [9:0]
     reg [2:0]  bit_index;    // 0~7 데이터 비트
     reg [7:0]  rx_shift;     // 수신 중인 데이터
 
@@ -38,7 +38,7 @@ module uart_rx (
     always @(posedge clk or negedge rst_n) begin
         if (!rst_n) begin
             state      <= IDLE;
-            clk_count  <= 9'd0;
+            clk_count  <= 10'd0;    // 9'd0 -> 10'd0
             bit_index  <= 3'd0;
             rx_shift   <= 8'd0;
             data_out   <= 8'd0;
@@ -48,7 +48,7 @@ module uart_rx (
 
             case (state)
                 IDLE: begin
-                    clk_count <= 9'd0;
+                    clk_count <= 10'd0;
                     bit_index <= 3'd0;
                     if (rx_sync2 == 1'b0)        // Start Bit 감지
                         state <= RX_START_BIT;
@@ -56,35 +56,35 @@ module uart_rx (
 
                 RX_START_BIT: begin
                     if (clk_count == HALF_BIT) begin  // 비트 정중앙
-                        clk_count <= 9'd0;
+                        clk_count <= 10'd0;
                         if (rx_sync2 == 1'b0)         // 여전히 LOW → 유효
                             state <= RX_DATA_BITS;
                         else                           // 노이즈 → 복귀
                             state <= IDLE;
                     end else begin
-                        clk_count <= clk_count + 9'd1;
+                        clk_count <= clk_count + 10'd1;
                     end
                 end
 
                 RX_DATA_BITS: begin
                     if (clk_count == CLKS_PER_BIT - 1) begin
-                        clk_count <= 9'd0;
+                        clk_count <= 10'd0;
                         rx_shift[bit_index] <= rx_sync2;  // LSB first
                         if (bit_index == 3'd7)
                             state <= RX_STOP_BIT;
                         else
                             bit_index <= bit_index + 3'd1;
                     end else begin
-                        clk_count <= clk_count + 9'd1;
+                        clk_count <= clk_count + 10'd1;
                     end
                 end
 
                 RX_STOP_BIT: begin
                     if (clk_count == CLKS_PER_BIT - 1) begin
-                        clk_count <= 9'd0;
+                        clk_count <= 10'd0;
                         state     <= DONE;
                     end else begin
-                        clk_count <= clk_count + 9'd1;
+                        clk_count <= clk_count + 10'd1;
                     end
                 end
 
