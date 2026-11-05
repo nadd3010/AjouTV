@@ -46,14 +46,14 @@ module tb_softmax_lut_vec;
                     for (j = 0; j < 4; j = j + 1)
                         if (attn_weight[i][j] !== e_aw[w*16 + i*4 + j]) begin
                             mism = mism + 1;
-                            if (bad < 5) $display("  [불일치] 윈도우 %0d [%0d][%0d]: RTL=%h 기대=%h", w, i, j,
+                            if (bad < 5) $display("  [MISMATCH] window %0d [%0d][%0d]: RTL=%h exp=%h", w, i, j,
                                                   attn_weight[i][j], e_aw[w*16 + i*4 + j]);
                         end
                 if (mism != 0) bad = bad + 1;
             end
             repeat (3) @(posedge clk);
         end
-        $display("softmax_lut 단위 테스트: %0d개 중 불일치 %0d개 -> %0s  (평균 %0d 클럭)", n, bad, (bad == 0) ? "PASS" : "FAIL", lat_sum / n);
+        $display("softmax_lut unit test: %0d windows, %0d mismatches -> %0s  (avg %0d clocks)", n, bad, (bad == 0) ? "PASS" : "FAIL", lat_sum / n);
 `ifdef __ICARUS__
         $finish;
 `else

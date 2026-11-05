@@ -130,17 +130,7 @@ AjouTV/
 
 **목적**: 저장소의 RTL과 `mem/`이 골든 모델(`q88_golden.py`)과 비트 단위로 일치하는지 확인한다.
 
-**준비**
-1. `mem/`의 세 가중치가 최종 모델과 같은지 확인(PowerShell, 저장소 루트):
-```
-foreach ($n in 'weights.mem','fc_weights.mem','fc_extra.mem') { if (Compare-Object (Get-Content "mem\$n") (Get-Content "python\final_model\$n")) { "다름: $n" } else { "동일: $n" } }
-```
-2. 검증 벡터 생성(`python/`에서, 평가 데이터셋 `dataset_t_hard`가 필요하다. 5절의 `phm_diag.py` -> `make_dataset.py`로 만든다):
-```
-python make_rtl_vectors.py --mode fixed --weights final_model\model_fp32.npz --data dataset_t_hard --mem-dir ..\mem --out kit_fixed
-python make_e2e_vectors.py --weights final_model\model_fp32.npz --data dataset_t_hard --mem-dir ..\mem --out kit_e2e
-```
-`kit_fixed`와 `kit_e2e`는 `.gitignore`로 제외되는 생성 산출물이다.
+**준비**: 없다. 검증 벡터(`python/kit_fixed`, `python/kit_e2e`)가 저장소에 들어 있다. 두 폴더는 최종 모델로 만든 생성물이라 가중치를 바꾸지 않는 한 다시 만들 필요가 없다.
 
 **실행** (ModelSim 명령창)
 ```
@@ -152,16 +142,18 @@ do run_e2e.do
 ```
 
 **통과 기준**
-| 실행 | 통과 기준 |
-| --- | --- |
-| `run_input_scaler.do` | `=== input_scaler: ALL PASS ===` |
-| `run_kit.do` | 코어 `[RESULT] ALL PASS`(9개 단계 모두 불일치 0 / 216), `fc_layer` PASS, `softmax_lut` PASS |
-| `run_e2e.do` | `[RESULT] ALL PASS` — window 77개, 입력 경로, 코어, 출력 경로 모두 PASS |
+(기존 표 그대로)
 
-- 테스트벤치 메시지는 UTF-8 한글이라 ModelSim 창에서 깨져 보일 수 있다. 판정은 영문 `PASS`, `FAIL`, `[RESULT]` 줄로 한다.
-- 100MHz로 바꾼 RTL을 검증할 때는 `sim/run_e2e.do`의 `CLK_NS`를 10으로 바꾼다.
-- `.mem` 파일은 시뮬레이션 작업 폴더(`kit_fixed`, `kit_e2e`)의 것을 읽고, 합성(Vivado)은 `mem/`의 것을 읽는다. 두 가중치가 같음은 위 준비 1번으로 확인한다.
+**참고**
+- 판정은 `PASS`, `FAIL`, `[RESULT]` 줄로 한다. 불일치가 있으면 `[MISMATCH]` 줄이 나온다.
+- `run_kit.do`, `run_e2e.do`는 시작할 때 `mem/`의 `.mem` 5개를 키트 폴더로 복사해서 쓴다. 검증에 쓰인 가중치는 항상 `mem/`의 파일이고, Vivado가 읽는 파일과 같다.
+- RTL은 100MHz 기준이라 `run_e2e.do`의 `CLK_NS`는 10이다.
 - FAIL이면 `run_e2e.do`의 표에서 입력 경로 -> 코어 -> 출력 경로 순서로 원인을 좁힌다(앞 단계가 일치하면 뒤 단계의 문제).
+- 가중치를 다시 학습해 바꿨을 때만 키트를 재생성한다(`dataset_t_hard` 필요):
+```
+python make_rtl_vectors.py --mode fixed --weights final_model\model_fp32.npz --data dataset_t_hard --mem-dir ..\mem --out kit_fixed
+python make_e2e_vectors.py --weights final_model\model_fp32.npz --data dataset_t_hard --mem-dir ..\mem --out kit_e2e
+```
 
 ## 7. 시연(PC 쪽) 사용 파일
 센서 값을 FPGA로 보낼 때는 `python/sensor_encoder.py`와 `python/final_model/dataset_meta.json`을 쓴다.

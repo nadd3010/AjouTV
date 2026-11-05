@@ -1,22 +1,38 @@
-# ModelSim 실행 스크립트 (RTL 수정 키트 검증)
+# ModelSim 실행 스크립트 (최종 검증: 코어 데이터패스 + fc_layer + softmax_lut)
 #
-# 사용법
-#   1) 경로는 이 스크립트 위치(AjouTV/sim)를 기준으로 자동 계산한다. 키트는 python/kit_fixed (make_rtl_vectors.py 결과).
-#   2) 수정한 rtl/, tb/ 파일이 저장소에 반영된 것을 확인한 뒤 ModelSim 에서 실행한다.
-#        quit -sim / cd <AjouTV>/sim / do run_kit.do
-#   (저장소의 기존 sim/run_all.do 는 건드리지 않는다. 이 파일은 별도로 추가해서 쓴다.)
+# 사용법:  quit -sim  /  cd <AjouTV>/sim  /  do run_kit.do   (ModelSim 은 do 안에서 스크립트 위치를 알려주지 않아, 현재 폴더가 sim 이어야 한다)
+#   1) 경로는 이 스크립트 위치(AjouTV/sim)를 기준으로 자동 계산한다.
+#   2) 테스트 입력과 기대값은 키트(python/kit_fixed, make_rtl_vectors.py 결과)에서 읽는다.
+#   3) 모델 .mem 5개(weights, fc_weights, fc_extra, softmax_exp_rom, softmax_inv_rom)는 저장소 mem/ 의 파일을
+#      키트 폴더로 덮어써서 사용한다. 즉 검증에 쓰이는 .mem 은 항상 mem/ 의 파일이다.
+#      (RTL 은 파일 이름만으로 .mem 을 읽는다. Vivado 도 같은 RTL 을 쓰므로 RTL 은 고치지 않고, 시뮬레이션 쪽에서 위치를 맞춘다.)
+#   (저장소의 기존 sim/run_all.do 는 건드리지 않는다.)
 #   수정 전 RTL(main)을 확인하려면 PATCHED 정의를 빈 문자열로 바꾸고, 키트도 --mode orig 로 만든 것을 쓴다.
 
 set _s [info script]
 if {$_s eq ""} { set SIM_DIR [pwd] } else { set SIM_DIR [file dirname [file normalize $_s]] }
-set REPO [file normalize "$SIM_DIR/.."]
-set KIT  "$REPO/python/kit_fixed"
-set DEFS "+define+PATCHED"
+set REPO   [file normalize "$SIM_DIR/.."]
+if {![file exists "$REPO/rtl/top.sv"]} { echo "(ERROR) repo not found from $SIM_DIR. In ModelSim run: cd <AjouTV>/sim   then run this script again"; return }
+set KIT    "$REPO/python/kit_fixed"
+set MEMDIR "$REPO/mem"
+set DEFS   "+define+PATCHED"
 
-# 작업 폴더를 키트 폴더로 바꾼다 (모듈이 .mem 을 파일 이름만으로 읽기 때문). 저장소 sim 폴더의 예전 .mem 과 섞이지 않는다.
+set MEMFILES [list weights.mem fc_weights.mem fc_extra.mem softmax_exp_rom.mem softmax_inv_rom.mem]
+foreach f $MEMFILES {
+    if {![file exists "$MEMDIR/$f"]} { echo "(ERROR) not found: $MEMDIR/$f"; return }
+}
+if {![file exists "$KIT/vec_n.mem"]} {
+    echo "(ERROR) kit folder not found: $KIT  (run make_rtl_vectors.py in python/ first)"
+    return
+}
+
 # 이전 시뮬레이션이 열려 있으면 폴더를 바꿀 수 없으므로 먼저 닫는다 ($stop 으로 멈춘 뒤에도 시뮬레이션은 열려 있다)
 catch {quit -sim}
 cd $KIT
+
+# 모델 .mem 을 저장소 mem/ 의 파일로 교체 (이후 시뮬레이션은 모두 이 파일을 읽는다)
+foreach f $MEMFILES { file copy -force "$MEMDIR/$f" "$KIT/$f" }
+echo "(MEM) model .mem files taken from $MEMDIR"
 
 if {[file exists work]} { vdel -lib work -all }
 vlib work
@@ -50,4 +66,7 @@ vsim work.tb_softmax_lut_vec
 run -all
 quit -sim
 
-echo "=== done: transcript 의 RESULT, 단위 테스트 PASS 줄을 확인하세요 ==="
+# 다음 스크립트(run_e2e.do)가 sim 폴더에서 시작할 수 있게 작업 폴더를 되돌린다
+cd $SIM_DIR
+
+echo "=== done: check the RESULT line and the unit test PASS lines in the transcript ==="
