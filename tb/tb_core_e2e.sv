@@ -64,7 +64,7 @@ module tb_core_e2e;
     fc_layer        u_fc   (.clk(clk), .rst_n(rst_n), .start(classify_start), .attn_out(attn_out), .x(x),
                             .score_abnormal(score_abnormal), .done(classify_done));
 `else
-    fc_layer        u_fc   (.clk(clk), .rst_n(rst_n), .start(classify_start), .attn_out(attn_out),
+    fc_layer        u_fc   (.clk(clk), .rst_n(rst_n), .start(classify_start), .attn_out(attn_out), .x(x),
                             .score_abnormal(score_abnormal), .done(classify_done));
 `endif
     argmax          u_am   (.score_abnormal(score_abnormal), .label(label));
@@ -110,22 +110,22 @@ module tb_core_e2e;
         sname[5] = "attn_out"; sname[6] = "z"; sname[7] = "label"; sname[8] = "cause";
         for (s = 0; s < 9; s = s + 1) begin bad[s] = 0; shown[s] = 0; end
 
-        $readmemh("vec_n.mem", nmem);
+        $readmemh("../python/kit_fixed/vec_n.mem", nmem);
         n = nmem[0];
         if (n > MAXW) begin
             $display("[ERROR] window count %0d exceeds MAXW(%0d). Increase MAXW.", n, MAXW);
             $finish;
         end
-        $readmemh("vec_x.mem",     vx,      0, n*16-1);
-        $readmemh("exp_q.mem",     e_q,     0, n*16-1);
-        $readmemh("exp_k.mem",     e_k,     0, n*16-1);
-        $readmemh("exp_v.mem",     e_v,     0, n*16-1);
-        $readmemh("exp_score.mem", e_score, 0, n*16-1);
-        $readmemh("exp_aw.mem",    e_aw,    0, n*16-1);
-        $readmemh("exp_ao.mem",    e_ao,    0, n*16-1);
-        $readmemh("exp_z.mem",     e_z,     0, n-1);
-        $readmemh("exp_label.mem", e_label, 0, n-1);
-        $readmemh("exp_cause.mem", e_cause, 0, n-1);
+        $readmemh("../python/kit_fixed/vec_x.mem",     vx,      0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_q.mem",     e_q,     0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_k.mem",     e_k,     0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_v.mem",     e_v,     0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_score.mem", e_score, 0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_aw.mem",    e_aw,    0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_ao.mem",    e_ao,    0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_z.mem",     e_z,     0, n-1);
+        $readmemh("../python/kit_fixed/exp_label.mem", e_label, 0, n-1);
+        $readmemh("../python/kit_fixed/exp_cause.mem", e_cause, 0, n-1);
 
         for (i = 0; i < 4; i = i + 1) for (j = 0; j < 4; j = j + 1) x[i][j] = 16'd0;
         fd = $fopen("rtl_trace.txt", "w");

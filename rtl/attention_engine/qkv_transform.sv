@@ -27,8 +27,8 @@ initial begin
 
 
     //*************** vivado 구울 때 경로 수정 ******************//
-    // $readmemh("../mem/weights.mem", weights_rom);       // modelsim 용 경로
-    $readmemh("weights.mem", weights_rom);       // vivado 용 경로
+    $readmemh("../mem/weights.mem", weights_rom);       // modelsim 용 경로
+    // $readmemh("weights.mem", weights_rom);       // vivado 용 경로
     
 
 

@@ -38,10 +38,10 @@ module fc_layer (
 
     initial begin
         //*************** vivado 구울 때 경로 수정 ******************//
-        // $readmemh("../mem/fc_weights.mem", w_fc);   // modelsim 경로
-        // $readmemh("../mem/fc_extra.mem",   fc_extra);
-        $readmemh("fc_weights.mem", w_fc);   // vivado 경로
-        $readmemh("fc_extra.mem",   fc_extra);
+        $readmemh("../mem/fc_weights.mem", w_fc);   // modelsim 경로
+        $readmemh("../mem/fc_extra.mem",   fc_extra);
+        // $readmemh("fc_weights.mem", w_fc);   // vivado 경로
+        // $readmemh("fc_extra.mem",   fc_extra);
     end
 
     logic [4:0]         idx;                 // 0~16 (17클럭)

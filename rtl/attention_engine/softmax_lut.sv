@@ -31,8 +31,8 @@ module softmax_lut (
 
 
     //*************** vivado 구울 때 경로 수정 ******************//
-        // $readmemh("../mem/softmax_exp_rom.mem", exp_rom);    // modelsim 경로 
-        $readmemh("softmax_exp_rom.mem", exp_rom);       // vivado 경로
+        $readmemh("../mem/softmax_exp_rom.mem", exp_rom);    // modelsim 경로 
+        // $readmemh("softmax_exp_rom.mem", exp_rom);       // vivado 경로
 
     
     end
@@ -45,8 +45,8 @@ module softmax_lut (
 
 
     //*************** vivado 구울 때 경로 수정 ******************//
-        // $readmemh("../mem/softmax_inv_rom.mem", inv_rom);   // modelsim 경로
-        $readmemh("softmax_inv_rom.mem", inv_rom);   // vivado 경로
+        $readmemh("../mem/softmax_inv_rom.mem", inv_rom);   // modelsim 경로
+        // $readmemh("softmax_inv_rom.mem", inv_rom);   // vivado 경로
     
     
     end

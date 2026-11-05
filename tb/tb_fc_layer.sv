@@ -25,11 +25,11 @@ module tb_fc_layer;
                   .score_abnormal(score_abnormal), .done(done));
 
     initial begin
-        $readmemh("vec_n.mem", nmem);
+        $readmemh("../python/kit_fixed/vec_n.mem", nmem);
         n = nmem[0];
-        $readmemh("vec_x.mem",  vx,   0, n*16-1);
-        $readmemh("exp_ao.mem", e_ao, 0, n*16-1);
-        $readmemh("exp_z.mem",  e_z,  0, n-1);
+        $readmemh("../python/kit_fixed/vec_x.mem",  vx,   0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_ao.mem", e_ao, 0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_z.mem",  e_z,  0, n-1);
         bad = 0;
         for (i = 0; i < 4; i = i + 1) for (j = 0; j < 4; j = j + 1) begin attn_out[i][j] = 0; x[i][j] = 0; end
         #20 rst_n = 1;
