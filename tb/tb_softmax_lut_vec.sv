@@ -21,10 +21,10 @@ module tb_softmax_lut_vec;
     softmax_lut dut (.clk(clk), .rst_n(rst_n), .start(start), .score(score), .attn_weight(attn_weight), .done(done));
 
     initial begin
-        $readmemh("vec_n.mem", nmem);
+        $readmemh("../python/kit_fixed/vec_n.mem", nmem);
         n = nmem[0];
-        $readmemh("exp_score.mem", e_score, 0, n*16-1);
-        $readmemh("exp_aw.mem",    e_aw,    0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_score.mem", e_score, 0, n*16-1);
+        $readmemh("../python/kit_fixed/exp_aw.mem",    e_aw,    0, n*16-1);
         bad = 0; lat_sum = 0;
         for (i = 0; i < 4; i = i + 1) for (j = 0; j < 4; j = j + 1) score[i][j] = 0;
         #20 rst_n = 1;

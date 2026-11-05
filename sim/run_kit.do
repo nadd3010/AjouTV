@@ -28,7 +28,7 @@ if {![file exists "$KIT/vec_n.mem"]} {
 
 # 이전 시뮬레이션이 열려 있으면 폴더를 바꿀 수 없으므로 먼저 닫는다 ($stop 으로 멈춘 뒤에도 시뮬레이션은 열려 있다)
 catch {quit -sim}
-cd $KIT
+cd $SIM_DIR
 
 # 모델 .mem 을 저장소 mem/ 의 파일로 교체 (이후 시뮬레이션은 모두 이 파일을 읽는다)
 foreach f $MEMFILES { file copy -force "$MEMDIR/$f" "$KIT/$f" }
