@@ -38,10 +38,10 @@ module fc_layer (
 
     initial begin
         //*************** vivado 구울 때 경로 수정 ******************//
-        $readmemh("../mem/fc_weights.mem", w_fc);   // modelsim 경로
-        $readmemh("../mem/fc_extra.mem",   fc_extra);
-        // $readmemh("fc_weights.mem", w_fc);   // vivado 경로
-        // $readmemh("fc_extra.mem",   fc_extra);
+        // $readmemh("../mem/fc_weights.mem", w_fc);   // modelsim 경로
+        // $readmemh("../mem/fc_extra.mem",   fc_extra);
+        $readmemh("fc_weights.mem", w_fc);   // vivado 경로
+        $readmemh("fc_extra.mem",   fc_extra);
     end
 
     logic [4:0]         idx;                 // 0~16 (17클럭)
@@ -80,7 +80,7 @@ module fc_layer (
                 end
                 DONE: begin
                     // Q8.8 복원([23:8]) 후 바이어스 가산 (16비트 wrap)
-                    score_abnormal <= mac_val[23:8] + fc_extra[0];
+                    score_abnormal <= $signed(mac_val[23:8]) + fc_extra[0];
                     done           <= 1'b1;
                 end
                 default: ;

@@ -79,6 +79,18 @@ module tb_core_e2e;
     integer fd;
     reg [8*10-1:0] sname [0:8];
 
+    // Throughput(처리율) 측정을 위한 변수 추가
+    integer latency_cycles;
+
+    realtime win_start_ns;
+    realtime classify_end_ns;
+    realtime first_done_ns;
+    realtime last_done_ns;
+
+    real avg_latency_cycles;
+    real tb_throughput;
+    real ideal_core_upper_bound;
+
     task automatic compare16(input integer stage, input integer win);
         integer e, mism;
         reg [15:0] exp_v;
@@ -139,6 +151,11 @@ module tb_core_e2e;
             for (i = 0; i < 4; i = i + 1)
                 for (j = 0; j < 4; j = j + 1)
                     x[i][j] = vx[w*16 + i*4 + j];
+
+            // 기존 timeout 변수는 window_ready가 내려간 후부터 클럭 수를 세기 때문에,
+            // 정확한 window_ready -> classify_done 경과시간과 차이 날 수 있어,
+            // 두 시점의 $realtime 차이를 사용하여 시뮬레이션상 실제 경과한 시간을 기준으로 latency 측정
+            /*
             @(posedge clk); #1 window_ready = 1;
             @(posedge clk); #1 window_ready = 0;
 
@@ -155,6 +172,61 @@ module tb_core_e2e;
             if (timeout < lat_min) lat_min = timeout;
             if (timeout > lat_max) lat_max = timeout;
             lat_sum = lat_sum + timeout;
+            */
+            // =====================================================
+            // Core Latency Measurement
+            // window_ready -> classify_done
+            // =====================================================
+
+            // 입력 윈도우 준비 완료 시점
+            @(posedge clk);
+            #1;
+            window_ready = 1'b1;
+            win_start_ns = $realtime;
+
+            // window_ready 1클럭 펄스
+            @(posedge clk);
+            #1;
+            window_ready = 1'b0;
+
+            // classify_done 대기
+            timeout = 0;
+
+            while (classify_done !== 1'b1 && timeout < 3000) begin
+                @(posedge clk);
+                #1;  // Nonblocking assignment 반영 후 확인
+                timeout = timeout + 1;
+            end
+
+            if (classify_done !== 1'b1) begin
+                $fatal(1,
+                    "[ERROR] window %0d: classify_done timeout! FSM=%0d",
+                    w, fsm_state);
+            end
+
+            // 분류 완료 시점
+            classify_end_ns = $realtime;
+
+            // 실제 경과 시간을 클럭 수로 변환
+            latency_cycles = $rtoi(
+                (classify_end_ns - win_start_ns) / 10.0 + 0.5
+            );
+
+            // Latency 통계 갱신
+            if (latency_cycles < lat_min)
+                lat_min = latency_cycles;
+
+            if (latency_cycles > lat_max)
+                lat_max = latency_cycles;
+
+            lat_sum = lat_sum + latency_cycles;
+
+            // Throughput 계산용 완료 시점 저장
+            if (w == 0)
+                first_done_ns = classify_end_ns;
+
+            last_done_ns = classify_end_ns;
+            
 
             // 단계별 비교 (classify_done 가 1인 시점에 모든 단계 결과가 유효)
             for (i = 0; i < 4; i = i + 1) for (j = 0; j < 4; j = j + 1) got[i*4+j] = q[i][j];
@@ -193,8 +265,68 @@ module tb_core_e2e;
         $display(" Core datapath check: %0d windows", n);
         for (s = 0; s < 9; s = s + 1)
             $display("  %0s : mismatched windows %0d / %0d  %0s", sname[s], bad[s], n, (bad[s] == 0) ? "PASS" : "FAIL");
-        $display("  latency (window_ready -> classify_done): min %0d / avg %0d / max %0d clocks (avg about %0d ns at 100MHz)",
-                 lat_min, lat_sum / n, lat_max, (lat_sum / n) * 10);
+        // =====================================================
+        // Latency & Throughput Summary
+        // =====================================================
+
+        avg_latency_cycles = lat_sum * 1.0 / n;
+
+        $display("");
+        $display("============== CORE PERFORMANCE ==============");
+
+        $display("[CORE LATENCY]");
+        $display("  Min : %0d clocks (%.3f us)",
+                lat_min, lat_min * 0.01);
+
+        $display("  Avg : %.2f clocks (%.3f us)",
+                avg_latency_cycles,
+                avg_latency_cycles * 0.01);
+
+        $display("  Max : %0d clocks (%.3f us)",
+                lat_max, lat_max * 0.01);
+
+        // Latency만으로 계산한 이상적인 비중첩 처리율 상한
+        // 연속 추론 사이 추가 유휴시간이 없다고 가정
+        ideal_core_upper_bound =
+            100000000.0 / avg_latency_cycles;
+
+        $display("");
+        $display("[IDEAL CORE THROUGHPUT UPPER BOUND]");
+        $display("  Estimated upper bound : %.2f windows/sec",
+                ideal_core_upper_bound);
+
+        // 실제 TB 반복 처리 완료 간격 기준 처리율
+        // UART 송신은 tx_done 모의 신호로 대체됨
+        if (n > 1 && last_done_ns > first_done_ns) begin
+
+            tb_throughput =
+                (n - 1) * 1.0e9 /
+                (last_done_ns - first_done_ns);
+
+            $display("");
+            $display("[TB REPEATED THROUGHPUT]");
+            $display("  Completed windows : %0d", n);
+
+            $display("  Measurement span : %.3f us",
+                    (last_done_ns - first_done_ns) / 1000.0);
+
+            $display("  Average completion interval : %.3f us",
+                    (last_done_ns - first_done_ns) /
+                    ((n - 1) * 1000.0));
+
+            $display("  Throughput : %.2f windows/sec",
+                    tb_throughput);
+
+            if (tb_throughput >= 2000.0)
+                $display("  [PASS] 2000 windows/sec target (TB scenario)");
+            else
+                $display("  [FAIL] 2000 windows/sec target (TB scenario)");
+
+        end else begin
+            $display("[INFO] Throughput requires at least 2 completed windows.");
+        end
+
+        $display("==============================================");
         t = 0;
         for (s = 0; s < 9; s = s + 1) t = t + bad[s];
         if (t == 0) $display(" [RESULT] ALL PASS");
